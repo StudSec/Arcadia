@@ -1,0 +1,74 @@
+appearance:
+  name: "StudSec Challenges"
+  description: ""
+
+theme:
+  logo:
+    from_file: images/logo.png
+  small_icon:
+    from_file: images/tab-icon.png
+  name: core-beta
+  header:
+    from_file: html/theme-header.html
+  footer:
+    from_file: html/theme-footer.html
+
+settings:
+  challenge_visibility: public
+  account_visibility: public
+  score_visibility: private
+  registration_visibility: public
+
+legal:
+  tos:
+    content:
+      from_file: tos.md
+
+# If set to 'teams', make sure to decide on the team_creation setting below.
+mode: users
+
+# accounts:
+#   # Team creation was set to false in production as teams where created ahead of the event,
+#   # thanks to a qualification round.
+#   team_creation: true
+
+admin:
+  name: "admin"
+  email: "noreply@studsec.nl"
+  password:
+    from_file: admin-password.txt
+
+pages:
+  additional:
+    - title: Rules
+      route: rules
+      format: markdown
+      content:
+        from_file: md/rules.md
+    - title: Getting Started
+      route: getting-started
+      format: markdown
+      content:
+        from_file: md/getting-started.md
+# uploads:
+#   - file:
+#       from_file: images/nbc.png
+#     location: images/nbc.png
+#   - file:
+#       from_file: images/pec-white.png
+#     location: images/pec-white.png
+#   - file:
+#       from_file: images/pec.png
+#     location: images/pec.png
+#   - file:
+#       from_file: images/rm-pro-white.svg
+#     location: images/rm-pro-white.svg
+#   - file:
+#       from_file: images/rm-pro.svg
+#     location: images/rm-pro.svg
+#   - file:
+#       from_file: images/synacktiv-white.png
+#     location: images/synacktiv-white.png
+#   - file:
+#       from_file: images/synacktiv.png
+#     location: images/synacktiv.png
