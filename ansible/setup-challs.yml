@@ -1,0 +1,35 @@
+- name: Setup-Challs
+  hosts: challs
+  become: true
+
+  vars:
+    pip_install_packages:
+      - name: docker
+
+  environment:
+    NEEDRESTART_MODE: automatically
+
+  pre_tasks:
+    - name: Wait for cloud-init / user-data to finish
+      # https://serverfault.com/a/1021022
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+
+  roles:
+    - geerlingguy.git
+    - geerlingguy.pip
+    - geerlingguy.docker
+
+  tasks:
+    - name: Copy CTFd configuration files
+      ansible.builtin.copy:
+        src: "./ctfd/"
+        dest: "/opt/ctfd/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Build and start docker
+      ansible.builtin.shell: |
+        cd /opt/ctfd
+        docker compose up -d

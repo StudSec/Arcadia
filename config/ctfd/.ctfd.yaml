@@ -40,11 +40,6 @@ admin:
 
 pages:
   additional:
-    - title: Rules
-      route: rules
-      format: markdown
-      content:
-        from_file: md/rules.md
     - title: Getting Started
       route: getting-started
       format: markdown

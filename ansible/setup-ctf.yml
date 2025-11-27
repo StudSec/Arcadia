@@ -1,0 +1,46 @@
+- name: Setup-CTF
+  hosts: ctf
+  become: true
+
+  vars:
+    pip_install_packages:
+      - name: docker
+
+  environment:
+    NEEDRESTART_MODE: automatically
+
+  pre_tasks:
+    - name: Wait for cloud-init / user-data to finish
+      # https://serverfault.com/a/1021022
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+
+  tasks:
+    - name: Copy Traefik configuration files
+      ansible.builtin.copy:
+        src: "./traefik/"
+        dest: "/opt/traefik/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create traefik-public network
+      community.docker.docker_network:
+        name: traefik-public
+        state: present
+        driver: overlay
+
+    - name: Set environment variables from .env file
+      ansible.builtin.shell: |
+        set -a
+        source /opt/traefik/.env
+        set +a
+
+    - name: Build and start Traefik
+      ansible.builtin.shell: |
+        cd /opt/traefik
+        docker compose up -d

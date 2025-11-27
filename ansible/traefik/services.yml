@@ -1,0 +1,16 @@
+http:
+  # define global routers, that use global services
+  # see -> https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/
+  # global middlewares, that can be re-used
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+# global routers use global services
+#  services:
+tls:
+  options:
+    default:
+      sniStrict: true

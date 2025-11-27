@@ -38,3 +38,7 @@ terraform.rc
 
 **/.admin-password
 **/id_ed25519*
+
+**/inventory.ini
+.ansible
+**/.env

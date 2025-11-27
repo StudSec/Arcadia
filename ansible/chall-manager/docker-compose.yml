@@ -1,0 +1,13 @@
+services:
+  # Chall-Manager API, that handle challenges creations.
+  chall-manager:
+    image: ctferio/chall-manager:v0.6.0
+    environment:
+      OCI_INSECURE: true
+
+  # Chall-Manager-Janitor, that handle challenges deletions wihtout timeout/until is define.
+  chall-manager-janitor:
+    image: ctferio/chall-manager-janitor:v0.6.0
+    environment:
+      URL: chall-manager:8080
+      TICKER: 1m

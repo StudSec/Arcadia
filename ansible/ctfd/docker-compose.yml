@@ -1,0 +1,75 @@
+services:
+  ctfd:
+    image: ctfd/ctfd:3.8.1
+    user: root
+    restart: always
+    environment:
+      - UPLOAD_FOLDER=/var/uploads
+      - DATABASE_URL=mysql+pymysql://ctfd:ctfd@db/ctfd
+      - REDIS_URL=redis://cache:6379
+      - WORKERS=1
+      - LOG_FOLDER=/var/log/CTFd
+      - ACCESS_LOG=-
+      - ERROR_LOG=-
+      - REVERSE_PROXY=true
+    volumes:
+      - ./data/logs:/var/log/CTFd
+      - ./data/uploads:/var/uploads
+      - ./plugins:/opt/CTFd/CTFd/plugins
+    depends_on:
+      - db
+      - cache
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-public"
+        # https entrypoint
+        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.ctf-https.entrypoints=https"
+        - "traefik.http.routers.ctf-https.tls=true"
+        # explicitly use le as certresolver
+        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
+        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=2368"
+    networks:
+      default:
+      internal:
+      traefik-public:
+
+  db:
+    image: mariadb:10.11
+    restart: always
+    environment:
+      - MARIADB_ROOT_PASSWORD=ctfd
+      - MARIADB_USER=ctfd
+      - MARIADB_PASSWORD=ctfd
+      - MARIADB_DATABASE=ctfd
+      - MARIADB_AUTO_UPGRADE=1
+    volumes:
+      - .data/mysql:/var/lib/mysql
+    networks:
+      internal:
+    # This command is required to set important mariadb defaults
+    command:
+      [
+        mysqld,
+        --character-set-server=utf8mb4,
+        --collation-server=utf8mb4_unicode_ci,
+        --wait_timeout=28800,
+        --log-warnings=0,
+      ]
+
+  cache:
+    image: redis:4
+    restart: always
+    volumes:
+      - .data/redis:/data
+    networks:
+      internal:
+
+networks:
+  default:
+  traefik-public:
+    external: true
+  internal:
+    internal: true

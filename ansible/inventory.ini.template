@@ -1,0 +1,5 @@
+[ctf]
+<IP where to deploy CTFd>
+
+[chall]
+<IP(s) where to deploy challenge servers>

@@ -1,0 +1,38 @@
+configs:
+  services-yml:
+    file: ./services.yml
+  traefik-yml:
+    file: ./traefik.yml
+
+services:
+  reverse-proxy:
+    image: traefik:v2.11
+    configs:
+      - source: services-yml
+        target: /etc/traefik/services.yml
+      - source: traefik-yml
+        target: /etc/traefik/traefik.yml
+    ports:
+      # The HTTP port
+      - "80:80"
+      # HTTPS also
+      - "443:443"
+      # publish The Web UI (enabled by --api.insecure=true)
+      # on a public port, uncomment to be able to reach it without DNS
+      # but only for testing purposes!
+    #      - "8080:8080"
+    volumes:
+      # Add Docker socket as a mounted volume, so that Traefik can read the labels of other services
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # acme.json for le challenges
+      - acme-data:/letsencrypt
+    networks:
+      - traefik-public
+
+volumes:
+  acme-data:
+
+networks:
+  # N.B. this must be created once on a manager node (e.g. docker network create --driver=overlay traefik-public)
+  traefik-public:
+    external: true
