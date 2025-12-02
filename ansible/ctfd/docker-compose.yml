@@ -19,21 +19,22 @@ services:
     depends_on:
       - db
       - cache
-    deploy:
-      labels:
-        - "traefik.enable=true"
-        # https entrypoint
-        - "traefik.http.routers.ctf-https.rule=Host(`$DOMAIN`)"
-        - "traefik.http.routers.ctf-https.entrypoints=https"
-        - "traefik.http.routers.ctf-https.tls=true"
-        # explicitly use le as certresolver
-        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
-        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=2368"
+    labels:
+      - "traefik.enable=true"
+      # https entrypoint
+      - "traefik.http.routers.ctf-https.rule=Host(`$DOMAIN`)"
+      - "traefik.http.routers.ctf-https.entrypoints=https"
+      - "traefik.http.routers.ctf-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+      # Needed for ctfd behind reverse proxy
+      - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
+      - "traefik.http.routers.ctf-https.service=ctfHttpsService"
+      - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
     networks:
       default:
       internal:
-      proxy:
+      traefik:
 
   db:
     image: mariadb:10.11
@@ -68,7 +69,7 @@ services:
 
 networks:
   default:
-  proxy:
+  traefik:
     external: true
   internal:
     internal: true

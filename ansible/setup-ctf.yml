@@ -34,11 +34,11 @@
         group: root
         mode: "0755"
 
-    - name: Create traefik-public network
+    - name: Create traefik network
       community.docker.docker_network:
-        name: traefik-public
+        name: traefik
         state: present
-        driver: overlay
+        driver: bridge
 
     - name: Substitute environment variables in traefik.yml
       ansible.builtin.shell: |
