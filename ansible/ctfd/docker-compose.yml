@@ -22,9 +22,8 @@ services:
     deploy:
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=traefik-public"
         # https entrypoint
-        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.ctf-https.rule=Host(`$DOMAIN`)"
         - "traefik.http.routers.ctf-https.entrypoints=https"
         - "traefik.http.routers.ctf-https.tls=true"
         # explicitly use le as certresolver
@@ -34,7 +33,7 @@ services:
     networks:
       default:
       internal:
-      traefik-public:
+      proxy:
 
   db:
     image: mariadb:10.11
@@ -69,7 +68,7 @@ services:
 
 networks:
   default:
-  traefik-public:
+  proxy:
     external: true
   internal:
     internal: true

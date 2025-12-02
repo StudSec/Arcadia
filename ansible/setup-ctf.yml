@@ -1,6 +1,9 @@
 - name: Setup-CTF
   hosts: ctf
+  remote_user: root
   become: true
+  vars_files:
+    - ctf.env.yml
 
   vars:
     pip_install_packages:
@@ -14,7 +17,10 @@
       # https://serverfault.com/a/1021022
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
-
+    - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
+      # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
+      ansible.builtin.apt:
+        update_cache: true
   roles:
     - geerlingguy.pip
     - geerlingguy.docker
@@ -34,11 +40,13 @@
         state: present
         driver: overlay
 
-    - name: Set environment variables from .env file
+    - name: Substitute environment variables in traefik.yml
       ansible.builtin.shell: |
-        set -a
-        source /opt/traefik/.env
-        set +a
+        envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
+        mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
+      environment:
+        DOMAIN: "{{ DOMAIN }}"
+        EMAIL: "{{ EMAIL }}"
 
     - name: Build and start Traefik
       ansible.builtin.shell: |

@@ -42,3 +42,4 @@ terraform.rc
 **/inventory.ini
 .ansible
 **/.env
+**/*env.yml

@@ -12,6 +12,10 @@ services:
         target: /etc/traefik/services.yml
       - source: traefik-yml
         target: /etc/traefik/traefik.yml
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
     ports:
       # The HTTP port
       - "80:80"
@@ -27,12 +31,26 @@ services:
       # acme.json for le challenges
       - acme-data:/letsencrypt
     networks:
-      - traefik-public
+      - proxy
+
+  whoami:
+    image: "traefik/whoami"
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.rombertus.com`)"
+      - "traefik.http.routers.whoami.entrypoints=https"
+      - "traefik.http.routers.whoami.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.whoami.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.whoami.service=whoamiHttpsService"
+      - "traefik.http.services.whoamiHttpsService.loadbalancer.server.port=80"
 
 volumes:
   acme-data:
 
 networks:
-  # N.B. this must be created once on a manager node (e.g. docker network create --driver=overlay traefik-public)
-  traefik-public:
-    external: true
+  proxy:
+    name: proxy

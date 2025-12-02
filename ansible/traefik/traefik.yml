@@ -27,7 +27,7 @@ certificatesResolvers:
     acme:
       # this must be replaced via envsubst or similar
       # or use docker compose run --rm envsubst to stamp it
-      email: ${EMAIL}
+      email: $EMAIL
       storage: /letsencrypt/acme.json
       tlsChallenge: {}
       #         uncomment for testing against staging...
@@ -40,4 +40,4 @@ providers:
     watch: true
   docker:
     exposedByDefault: false
-    swarmMode: true
+    swarmMode: false
