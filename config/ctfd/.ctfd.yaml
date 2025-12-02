@@ -1,12 +1,18 @@
+admin:
+  name: "admin"
+  email: "noreply@studsec.nl"
+  password:
+    from_env: ADMIN_PASSWORD
+
 appearance:
   name: "StudSec Challenges"
-  description: ""
+  description: "CTFd instance"
 
 theme:
   logo:
     from_file: images/logo.png
   small_icon:
-    from_file: images/tab-icon.png
+    from_file: images/logo-icon.png
   name: core-beta
   header:
     from_file: html/theme-header.html
@@ -22,7 +28,7 @@ settings:
 legal:
   tos:
     content:
-      from_file: tos.md
+      from_file: md/tos.md
 
 # If set to 'teams', make sure to decide on the team_creation setting below.
 mode: users
@@ -32,12 +38,6 @@ mode: users
 #   # thanks to a qualification round.
 #   team_creation: true
 
-admin:
-  name: "admin"
-  email: "noreply@studsec.nl"
-  password:
-    from_file: admin-password.txt
-
 pages:
   additional:
     - title: Getting Started
@@ -45,6 +45,13 @@ pages:
       format: markdown
       content:
         from_file: md/getting-started.md
+    - title: "Home"
+      route: "index"
+      # content:
+      # from_file: html/index.html
+      content: |
+        <script>window.location.href = "/challenges";</script>
+
 # uploads:
 #   - file:
 #       from_file: images/nbc.png

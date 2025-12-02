@@ -15,11 +15,11 @@ then
 fi
 
 echo "[-] Generating secret files..."
-if [ ! -f ctfd/.admin-password ]; then
-    openssl rand -base64 20 > ctfd/.admin-password
-    echo -e "${GREEN}[+] Generated ctfd/.admin-password file.${NC}"
+if [ ! -f ctfd/.env ]; then
+    echo -e "ADMIN_PASSWORD='$(openssl rand -base64 20)'" >> ctfd/.env
+    echo -e "${GREEN}[+] Generated ctfd/.env file.${NC}"
 else
-    echo -e "${GREEN}[!] ctfd/.admin-password file already exists, skipping...${NC}"
+    echo -e "${GREEN}[!] ctfd/.env file already exists, skipping...${NC}"
 fi
 
 # Generate id_ed25519 if it doesn't exist
