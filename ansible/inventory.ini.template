@@ -2,4 +2,8 @@
 <IP where to deploy CTFd>
 
 [chall]
-<IP(s) where to deploy challenge servers>
+<IP where to deploy challenge server main node>
+<IP(s) where to deploy challenge servers workers, if needed>
+
+[manager]
+<IP where to deploy challenge server main node>

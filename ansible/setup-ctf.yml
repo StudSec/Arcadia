@@ -26,6 +26,7 @@
     - geerlingguy.docker
 
   tasks:
+# TRAEFIK SETUP
     - name: Copy Traefik configuration files
       ansible.builtin.copy:
         src: "./traefik/"
@@ -48,7 +49,30 @@
         DOMAIN: "{{ DOMAIN }}"
         EMAIL: "{{ EMAIL }}"
 
+# CTFD SETUP
+
     - name: Build and start Traefik
       ansible.builtin.shell: |
         cd /opt/traefik
+        docker compose up -d
+
+    - name: Copy CTFd configuration files
+      ansible.builtin.copy:
+        src: "./ctfd/"
+        dest: "/opt/ctfd/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Substitute environment variables in traefik.yml
+      ansible.builtin.shell: |
+        envsubst < /opt/ctfd/docker-compose.yml > /opt/ctfd/docker-compose.yml.tmp
+        mv /opt/ctfd/docker-compose.yml.tmp /opt/ctfd/docker-compose.yml
+      environment:
+        DOMAIN: "{{ DOMAIN }}"
+        EMAIL: "{{ EMAIL }}"
+
+    - name: Build and start docker
+      ansible.builtin.shell: |
+        cd /opt/ctfd
         docker compose up -d

@@ -1,5 +1,6 @@
-- name: Setup-Challs
+- name: Setup Challs - Install dependencies
   hosts: challs
+  remote_user: root
   become: true
 
   vars:
@@ -20,16 +21,37 @@
     - geerlingguy.pip
     - geerlingguy.docker
 
+- name: Setup Challs - swarm manager initialization
+  hosts: manager
+  remote_user: root
+  become: true
   tasks:
-    - name: Copy CTFd configuration files
-      ansible.builtin.copy:
-        src: "./ctfd/"
-        dest: "/opt/ctfd/"
-        owner: root
-        group: root
-        mode: "0755"
+    - name: Initialize Docker Swarm on Manager
+      when: "'manager' in group_names"
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "{{ ansible_default_ipv4.address }}"
+      register: swarm_init
 
-    - name: Build and start docker
-      ansible.builtin.shell: |
-        cd /opt/ctfd
-        docker compose up -d
+    - name: Retrieve Swarm Info (to get Join Tokens)
+      when: "'manager' in group_names"
+      community.docker.docker_swarm_info:
+      register: swarm_info
+
+    - name: Set Join Token Fact
+      when: "'manager' in group_names"
+      ansible.builtin.set_fact:
+        worker_join_token: "{{ swarm_info.swarm_facts.JoinTokens.Worker }}"
+        manager_ip: "{{ ansible_default_ipv4.address }}"
+
+- name: Setup Challs - swarm workers initialization
+  hosts: challs:!manager
+  remote_user: root
+  become: true
+  tasks:
+    - name: Join Swarm as Worker
+      when: "'manager' not in group_names"
+      community.docker.docker_swarm:
+        state: join
+        join_token: "{{ hostvars[groups['manager'][0]]['worker_join_token'] }}"
+        remote_addrs: ["{{ hostvars[groups['manager'][0]]['manager_ip'] }}:2377"]

@@ -31,6 +31,11 @@ services:
       - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
       - "traefik.http.routers.ctf-https.service=ctfHttpsService"
       - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
+    healthcheck:
+      test: python3 -c 'import requests; requests.get("http://localhost:8000")'
+      interval: 10s
+      retries: 3
+      timeout: 10s
     networks:
       default:
       internal:
@@ -66,6 +71,19 @@ services:
       - .data/redis:/data
     networks:
       internal:
+
+  ctfd-setup:
+    image: ctferio/ctfd-setup:v1.7.1
+    environment:
+      URL: http://ctfd:8000
+      FILE: /ctfd-setup/.ctfd.yaml
+    env_file:
+      - ./ctfd-setup/.env
+    volumes:
+      - ./ctfd-setup:/ctfd-setup
+    depends_on:
+      ctfd:
+        condition: service_healthy
 
 networks:
   default:
