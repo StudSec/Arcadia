@@ -85,4 +85,4 @@
 
     - name: Deploy challenges with checker.py
       ansible.builtin.command: >
-        python3 /opt/challs/deploy.py --run --host {{ CHALL_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
+        python3 /opt/challs/checker.py --run --host {{ CHALLS_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
