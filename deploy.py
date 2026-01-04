@@ -34,6 +34,11 @@ def create_env(args: Namespace):
     cert_email = input_with_default(
         "Enter cert email (e.g. cert@example.com)", args.cert_email
     )
+    chall_repo = input_with_default(
+        "Enter challenge repository URL (e.g. https://PAT:@github.com/user/repo.git)",
+        args.chall_repo,
+    )
+    admin_pass = secrets.token_urlsafe(32)
 
     with open("ansible/.env.yml", "w") as f:
         f.writelines(
@@ -44,12 +49,14 @@ def create_env(args: Namespace):
                 "REGISTRY_USER: admin\n",
                 f"REGISTRY_PASS: {secrets.token_urlsafe(32)}\n",
                 f"SECRET_KEY: {secrets.token_urlsafe(32)}\n",
+                f"CHALL_REPO: {chall_repo}\n",
+                f"ADMIN_PASS: {admin_pass}\n",
+                f"ADMIN_TOKEN: {secrets.token_urlsafe(64)}\n",
             ]
         )
 
     with open("ansible/ctfd/ctfd-setup/.env", "w") as f:
-        f.write(f"export ADMIN_PASSWORD='{secrets.token_urlsafe(32)}'\n")
-
+        f.write(f"export ADMIN_PASSWORD='{admin_pass}'\n")
     print(colored(".env files created!", "green"))
 
 
@@ -116,6 +123,12 @@ def get_parser() -> ArgumentParser:
         type=str,
         help="Domain for the challenges",
     )
+    parser.add_argument(
+        "--chall-repo",
+        type=str,
+        help="Git repository URL for challenges",
+    )
+
     return parser
 
 

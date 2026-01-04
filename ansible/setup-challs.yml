@@ -2,6 +2,8 @@
   hosts: challs
   remote_user: root
   become: true
+  vars_files:
+    - .env.yml
 
   vars:
     pip_install_packages:
@@ -20,6 +22,13 @@
     - geerlingguy.git
     - geerlingguy.pip
     - geerlingguy.docker
+
+  tasks:
+    - name: Login to remote Docker registry
+      community.docker.docker_login:
+        registry_url: "registry.{{ CTF_DOMAIN }}"
+        username: "{{ REGISTRY_USER }}"
+        password: "{{ REGISTRY_PASS }}"
 
 - name: Setup Challs - swarm manager initialization
   hosts: manager
@@ -55,3 +64,25 @@
         state: join
         join_token: "{{ hostvars[groups['manager'][0]]['worker_join_token'] }}"
         remote_addrs: ["{{ hostvars[groups['manager'][0]]['manager_ip'] }}:2377"]
+
+- name: Setup Challs - Deploy challenges
+  hosts: manager
+  remote_user: root
+  become: true
+  vars_files:
+    - .env.yml
+
+  tasks:
+    - name: Clone challenges repository
+      ansible.builtin.git:
+        repo: "{{ CHALL_REPO }}"
+        dest: /opt/challs
+
+    - name: Install Python dependencies for deploy.py
+      ansible.builtin.pip:
+        requirements: /opt/challs/requirements.txt
+        executable: pip3
+
+    - name: Deploy challenges with checker.py
+      ansible.builtin.command: >
+        python3 /opt/challs/deploy.py --run --host {{ CHALL_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
