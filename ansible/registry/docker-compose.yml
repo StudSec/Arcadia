@@ -1,0 +1,28 @@
+services:
+  registry:
+    image: registry:3
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+      - REGISTRY_AUTH_HTPASSWD_PATH=/var/lib/registry/auth/htpasswd
+      - OTEL_TRACES_EXPORTER=none
+    volumes:
+      - /opt/registry:/var/lib/registry
+    labels:
+      - "traefik.enable=true"
+      # https entrypoint
+      - "traefik.http.routers.registry-https.rule=Host(`$DOMAIN`)"
+      - "traefik.http.routers.registry-https.entrypoints=https"
+      - "traefik.http.routers.registry-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.registry-https.tls.certresolver=letsencrypt"
+      # Needed for ctfd behind reverse proxy
+      - "traefik.http.routers.registry-https.middlewares=forward-proto@file"
+      - "traefik.http.routers.registry-https.service=registryHttpsService"
+      - "traefik.http.services.registryHttpsService.loadbalancer.server.port=5000"
+    networks:
+      traefik:
+
+networks:
+  traefik:
+    external: true

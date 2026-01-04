@@ -7,7 +7,8 @@ services:
       - UPLOAD_FOLDER=/var/uploads
       - DATABASE_URL=mysql+pymysql://ctfd:ctfd@db/ctfd
       - REDIS_URL=redis://cache:6379
-      - WORKERS=1
+      - WORKERS=7
+      - SECRET_KEY=$SECRET_KEY
       - LOG_FOLDER=/var/log/CTFd
       - ACCESS_LOG=-
       - ERROR_LOG=-
@@ -35,7 +36,7 @@ services:
       test: python3 -c 'import requests; requests.get("http://localhost:8000")'
       interval: 10s
       retries: 3
-      timeout: 10s
+      timeout: 15s
     networks:
       default:
       internal:
@@ -76,18 +77,19 @@ services:
     image: ctferio/ctfd-setup:v1.7.1
     environment:
       URL: http://ctfd:8000
-      FILE: /ctfd-setup/.ctfd.yaml
+      FILE: /opt/ctfd-setup/.ctfd.yaml
+      DIRECTORY: /opt/ctfd-setup
     env_file:
       - ./ctfd-setup/.env
     volumes:
-      - ./ctfd-setup:/ctfd-setup
+      - ./ctfd-setup:/opt/ctfd-setup
     depends_on:
       ctfd:
         condition: service_healthy
 
 networks:
-  default:
   traefik:
     external: true
   internal:
     internal: true
+  default:

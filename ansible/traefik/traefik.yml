@@ -41,3 +41,4 @@ providers:
   docker:
     exposedByDefault: false
     swarmMode: false
+    network: traefik

@@ -1,3 +1,0 @@
-ControlMaster     auto
-ControlPath       ~/.ssh/control-%C
-ControlPersist    yes

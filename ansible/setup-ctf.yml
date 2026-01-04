@@ -3,7 +3,7 @@
   remote_user: root
   become: true
   vars_files:
-    - ctf.env.yml
+    - .env.yml
 
   vars:
     pip_install_packages:
@@ -46,16 +46,15 @@
         envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
         mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
       environment:
-        DOMAIN: "{{ DOMAIN }}"
-        EMAIL: "{{ EMAIL }}"
-
-# CTFD SETUP
+        DOMAIN: "{{ CTF_DOMAIN }}"
+        EMAIL: "{{ CERT_EMAIL }}"
 
     - name: Build and start Traefik
       ansible.builtin.shell: |
         cd /opt/traefik
         docker compose up -d
 
+# CTFD SETUP
     - name: Copy CTFd configuration files
       ansible.builtin.copy:
         src: "./ctfd/"
@@ -64,15 +63,49 @@
         group: root
         mode: "0755"
 
-    - name: Substitute environment variables in traefik.yml
+    - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |
         envsubst < /opt/ctfd/docker-compose.yml > /opt/ctfd/docker-compose.yml.tmp
         mv /opt/ctfd/docker-compose.yml.tmp /opt/ctfd/docker-compose.yml
       environment:
-        DOMAIN: "{{ DOMAIN }}"
-        EMAIL: "{{ EMAIL }}"
+        DOMAIN: "{{ CTF_DOMAIN }}"
+        SECRET_KEY: "{{ SECRET_KEY }}" 
 
-    - name: Build and start docker
+    - name: Build and start CTFd docker
       ansible.builtin.shell: |
         cd /opt/ctfd
         docker compose up -d
+    
+# REGISTRY SETUP
+    - name: Copy Registry configuration files
+      ansible.builtin.copy:
+        src: "./registry/"
+        dest: "/opt/registry/"
+        owner: root
+        group: root
+        mode: "0755"
+      
+    - name: Substitute environment variables in docker-compose.yml
+      ansible.builtin.shell: |
+        envsubst < /opt/registry/docker-compose.yml > /opt/registry/docker-compose.yml.tmp
+        mv /opt/registry/docker-compose.yml.tmp /opt/registry/docker-compose.yml
+      environment:
+        DOMAIN: "registry.{{ CTF_DOMAIN }}"
+
+    - name: Create registry htpasswd file
+      ansible.builtin.command: |
+        docker run --rm --entrypoint htpasswd httpd:2 -Bbn {{ REGISTRY_USER }} {{ REGISTRY_PASS }}
+      register: htpasswd_output
+
+    - name: Save htpasswd file
+      ansible.builtin.copy:
+        content: "{{ htpasswd_output.stdout }}"
+        dest: /opt/registry/auth/htpasswd
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Build and start Registry docker
+      ansible.builtin.shell: |
+        cd /opt/registry
+        docker compose up -d 
