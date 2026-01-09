@@ -24,6 +24,7 @@ settings:
   account_visibility: public
   score_visibility: private
   registration_visibility: public
+  incorrect_submissions_per_minute: 10
 
 legal:
   tos:
