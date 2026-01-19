@@ -20,11 +20,14 @@ theme:
     from_file: html/theme-footer.html
 
 settings:
-  challenge_visibility: public
-  account_visibility: public
+  challenge_visibility: private
+  account_visibility: private
   score_visibility: private
-  registration_visibility: public
+  registration_visibility: private
   incorrect_submissions_per_minute: 10
+
+time:
+  view_after: true
 
 legal:
   tos:
