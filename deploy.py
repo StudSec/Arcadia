@@ -92,21 +92,9 @@ def get_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--force-env",
+        "--create-env",
         action="store_true",
-        help="Forcibly create .env files",
-    )
-
-    parser.add_argument(
-        "--provision",
-        action="store_true",
-        help="Provision remote nodes (currently not implemented)",
-    )
-
-    parser.add_argument(
-        "--setup",
-        action="store_true",
-        help="Setup remote nodes using Ansible",
+        help="Create .env files",
     )
     parser.add_argument(
         "--cert-email",
@@ -129,6 +117,18 @@ def get_parser() -> ArgumentParser:
         help="Git repository URL for challenges",
     )
 
+    parser.add_argument(
+        "--provision",
+        action="store_true",
+        help="Provision remote nodes (currently not implemented)",
+    )
+
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Setup remote nodes using Ansible",
+    )
+
     return parser
 
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if (
-        args.force_env
+        args.create_env
         or (not os.path.exists("ansible/.env.yml"))
         or (not os.path.exists("ansible/ctfd/ctfd-setup/.env"))
     ):

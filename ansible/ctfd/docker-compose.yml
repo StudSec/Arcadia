@@ -86,6 +86,8 @@ services:
       - ./ctfd-setup/.env
     volumes:
       - ./ctfd-setup:/opt/ctfd-setup
+    networks:
+      internal:
     depends_on:
       ctfd:
         condition: service_healthy

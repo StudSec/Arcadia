@@ -24,6 +24,11 @@ settings:
   account_visibility: private
   score_visibility: private
   registration_visibility: private
+
+accounts:
+  team_creation: false
+  team_disbanding: "disabled"
+  name_changes: false
   incorrect_submissions_per_minute: 10
 
 time:
