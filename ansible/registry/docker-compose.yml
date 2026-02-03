@@ -13,6 +13,11 @@ services:
       traefik:
     deploy:
       replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 64M
       placement:
         constraints:
           - node.labels.type == manager

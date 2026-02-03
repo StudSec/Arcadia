@@ -1,6 +1,11 @@
 x-deployment: &deployment
   deploy:
     replicas: 1
+    resources:
+      limits:
+        memory: 2048M
+      reservations:
+        memory: 128M
     placement:
       constraints:
         - node.labels.type == ctf

@@ -26,6 +26,25 @@
     - geerlingguy.docker
     - geerlingguy.git
 
+- name: Manager - Setup Docker daemon for metrics
+  hosts: all
+  remote_user: root
+  become: true
+  tasks:
+    - name: Copy over daemon.json to enable Docker metrics
+      ansible.builtin.copy:
+        src: "./monitoring/daemon.json"
+        dest: "/etc/docker/daemon.json"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Restart Docker to apply daemon changes
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+
 # SETUP SWARM
 - name: Setup Swarm - swarm manager initialization
   hosts: manager

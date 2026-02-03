@@ -98,7 +98,7 @@ services:
     command:
       - "--path.sysfs=/host/sys"
       - "--path.procfs=/host/proc"
-      - "--collector.textfile.directory=/etc/node-exporter/"
+      - "--collector.textfile.directory=/tmp/node-exporter/"
       - "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)"
       - "--no-collector.ipvs"
     deploy:
@@ -201,6 +201,21 @@ services:
       - "traefik.http.routers.prometheus-https.service=prometheusHttpsService"
       - "traefik.http.services.prometheusHttpsService.loadbalancer.server.port=9090"
       - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:${HASHED_PASS}"
+
+  # dockerd-exporter:
+  #   image: alpine/socat
+  #   networks:
+  #     - net
+  #   command: tcp-listen:9323,fork,reuseaddr tcp:host.docker.internal:9323
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   deploy:
+  #     mode: global
+  #     resources:
+  #       limits:
+  #         memory: 128M
+  #       reservations:
+  #         memory: 64M
 
   # alertmanager:
   #   image: prom/alertmanager:v0.27.0
