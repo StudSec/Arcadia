@@ -1,0 +1,175 @@
+- name: Manager - Initialization
+  hosts: all
+  remote_user: root
+  become: true
+  vars_files:
+    - .env.yml
+
+  vars:
+    pip_install_packages:
+      - name: docker
+
+  environment:
+    NEEDRESTART_MODE: automatically
+
+  pre_tasks:
+    - name: Wait for cloud-init / user-data to finish
+      # https://serverfault.com/a/1021022
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+    - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
+      # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
+      ansible.builtin.apt:
+        update_cache: true
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+    - geerlingguy.git
+
+# SETUP SWARM
+- name: Setup Swarm - swarm manager initialization
+  hosts: manager
+  remote_user: root
+  become: true
+  tasks:
+    - name: Initialize Docker Swarm on Manager
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "{{ ansible_default_ipv4.address }}"
+      register: swarm_init
+
+    - name: Retrieve Swarm Info (to get Join Tokens)
+      community.docker.docker_swarm_info:
+      register: swarm_info
+
+    - name: Set Join Token Fact
+      ansible.builtin.set_fact:
+        worker_join_token: "{{ swarm_info.swarm_facts.JoinTokens.Worker }}"
+        manager_ip: "{{ ansible_default_ipv4.address }}"
+
+    - name: Set manager label
+      community.docker.docker_node:
+        hostname: "{{ ansible_hostname }}"
+        labels:
+          type: manager
+
+- name: Setup Swarm - swarm workers initialization
+  hosts: all
+  remote_user: root
+  become: true
+  tasks:
+    - name: Join Swarm as Worker
+      when: "'manager' not in group_names"
+      community.docker.docker_swarm:
+        state: join
+        join_token: "{{ hostvars[groups['manager'][0]]['worker_join_token'] }}"
+        remote_addrs: ["{{ hostvars[groups['manager'][0]]['manager_ip'] }}:2377"]
+
+- name: Manager - Deploy Services
+  hosts: manager
+  remote_user: root
+  become: true
+  vars_files:
+    - .env.yml
+  tasks:
+    - name: Install jsondiff for docker_stack module
+      ansible.builtin.pip:
+        name: jsondiff
+        executable: pip3
+# TRAEFIK SETUP
+    - name: Copy Traefik configuration files
+      ansible.builtin.copy:
+        src: "./traefik/"
+        dest: "/opt/traefik/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Substitute environment variables in docker-compose.yml
+      ansible.builtin.shell: |
+        envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
+        mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
+      environment:
+        EMAIL: "{{ CERT_EMAIL }}"
+      changed_when: true
+
+    - name: Create traefik swarm network
+      community.docker.docker_network:
+        name: traefik
+        driver: overlay
+        scope: swarm
+        state: present
+
+    - name: Build and start Traefik
+      community.docker.docker_stack:
+        compose: /opt/traefik/docker-compose.yml
+        state: present
+        name: traefik
+
+# REGISTRY SETUP
+    - name: Copy Registry configuration files
+      ansible.builtin.copy:
+        src: "./registry/"
+        dest: "/opt/registry/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Substitute environment variables in docker-compose.yml
+      ansible.builtin.shell: |
+        envsubst < /opt/registry/docker-compose.yml > /opt/registry/docker-compose.yml.tmp
+        mv /opt/registry/docker-compose.yml.tmp /opt/registry/docker-compose.yml
+      environment:
+        DOMAIN: "registry.{{ CTF_DOMAIN }}"
+      changed_when: true
+
+    - name: Install passlib for htpasswd module
+      ansible.builtin.pip:
+        name: passlib
+        executable: pip3
+
+    - name: Create registry htpasswd file
+      community.general.htpasswd:
+        path: /opt/registry/auth/htpasswd
+        name: "{{ REGISTRY_USER }}"
+        password: "{{ REGISTRY_PASS }}"
+        crypt_scheme: bcrypt
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Build and start Registry docker
+      community.docker.docker_stack:
+        compose: /opt/registry/docker-compose.yml
+        state: present
+        name: registry
+
+
+# MONITORING SETUP
+    - name: Copy Monitoring docker files
+      ansible.builtin.copy:
+        src: "./monitoring/"
+        dest: "/opt/monitoring/"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Escape $ in hashed password for compose interpolation
+      ansible.builtin.set_fact:
+        hashed_pass_escaped: "{{ HASHED_PASS | replace('$', '$$') }}"
+
+    - name: Substitute environment variables in docker-compose.yml
+      ansible.builtin.shell: |
+        envsubst < /opt/monitoring/docker-compose.yml > /opt/monitoring/docker-compose.yml.tmp
+        mv /opt/monitoring/docker-compose.yml.tmp /opt/monitoring/docker-compose.yml
+      environment:
+        DOMAIN: "{{ CTF_DOMAIN }}"
+        ADMIN_PASS: "{{ ADMIN_PASS }}"
+        HASHED_PASS: "{{ hashed_pass_escaped }}"
+      changed_when: true
+
+    - name: Build and start Monitoring docker
+      community.docker.docker_stack:
+        compose: /opt/monitoring/docker-compose.yml
+        state: present
+        name: monitoring

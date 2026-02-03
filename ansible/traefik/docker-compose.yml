@@ -32,6 +32,11 @@ services:
       - acme-data:/letsencrypt
     networks:
       - traefik
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.type == manager
 
 volumes:
   acme-data:

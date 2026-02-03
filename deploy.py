@@ -52,6 +52,7 @@ def create_env(args: Namespace):
                 f"CHALL_REPO: {chall_repo}\n",
                 f"ADMIN_PASS: {admin_pass}\n",
                 f"ADMIN_TOKEN: {secrets.token_urlsafe(64)}\n",
+                f"HASHED_PASS: {subprocess.check_output(['openssl', 'passwd', admin_pass]).decode().strip()}\n",
             ]
         )
 
@@ -77,6 +78,7 @@ def setup_remote_nodes():
 
     try:
         print(colored("Setting up remote nodes...", "blue"))
+        run_playbook("setup-manager")
         run_playbook("setup-ctf")
         run_playbook("setup-challs")
         print(colored("Remote nodes setup successfully", "green"))

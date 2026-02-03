@@ -1,9 +1,8 @@
+[manager]
+<IP where to deploy monitoring, traefik, and registry>
+
 [ctf]
 <IP where to deploy CTFd>
 
 [challs]
-<IP where to deploy challenge server main node>
-<IP(s) where to deploy challenge servers workers, if needed>
-
-[manager]
-<IP where to deploy challenge server main node>
+<IP(s) where to deploy challenge servers workers>

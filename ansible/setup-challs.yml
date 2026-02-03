@@ -1,4 +1,4 @@
-- name: Setup Challs - Install dependencies
+- name: Challs - Initialization
   hosts: challs
   remote_user: root
   become: true
@@ -24,49 +24,20 @@
     - geerlingguy.docker
 
   tasks:
+    - name: Set challs label
+      community.docker.docker_node:
+        hostname: "{{ ansible_hostname }}"
+        labels:
+          type: challs
+
     - name: Login to remote Docker registry
       community.docker.docker_login:
         registry_url: "registry.{{ CTF_DOMAIN }}"
         username: "{{ REGISTRY_USER }}"
         password: "{{ REGISTRY_PASS }}"
 
-- name: Setup Challs - swarm manager initialization
-  hosts: manager
-  remote_user: root
-  become: true
-  tasks:
-    - name: Initialize Docker Swarm on Manager
-      when: "'manager' in group_names"
-      community.docker.docker_swarm:
-        state: present
-        advertise_addr: "{{ ansible_default_ipv4.address }}"
-      register: swarm_init
-
-    - name: Retrieve Swarm Info (to get Join Tokens)
-      when: "'manager' in group_names"
-      community.docker.docker_swarm_info:
-      register: swarm_info
-
-    - name: Set Join Token Fact
-      when: "'manager' in group_names"
-      ansible.builtin.set_fact:
-        worker_join_token: "{{ swarm_info.swarm_facts.JoinTokens.Worker }}"
-        manager_ip: "{{ ansible_default_ipv4.address }}"
-
-- name: Setup Challs - swarm workers initialization
-  hosts: challs:!manager
-  remote_user: root
-  become: true
-  tasks:
-    - name: Join Swarm as Worker
-      when: "'manager' not in group_names"
-      community.docker.docker_swarm:
-        state: join
-        join_token: "{{ hostvars[groups['manager'][0]]['worker_join_token'] }}"
-        remote_addrs: ["{{ hostvars[groups['manager'][0]]['manager_ip'] }}:2377"]
-
-- name: Setup Challs - Deploy challenges
-  hosts: manager
+- name: Challs - Deploy challenges
+  hosts: challs[0]
   remote_user: root
   become: true
   vars_files:

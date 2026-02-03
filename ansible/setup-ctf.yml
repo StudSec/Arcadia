@@ -1,4 +1,4 @@
-- name: Setup-CTF
+- name: CTF - Setup
   hosts: ctf
   remote_user: root
   become: true
@@ -26,36 +26,13 @@
     - geerlingguy.docker
 
   tasks:
-# TRAEFIK SETUP
-    - name: Copy Traefik configuration files
-      ansible.builtin.copy:
-        src: "./traefik/"
-        dest: "/opt/traefik/"
-        owner: root
-        group: root
-        mode: "0755"
+    - name: Set ctf label
+      community.docker.docker_node:
+        hostname: "{{ ansible_hostname }}"
+        labels:
+          type: ctf
 
-    - name: Create traefik network
-      community.docker.docker_network:
-        name: traefik
-        state: present
-        driver: bridge
-
-    - name: Substitute environment variables in traefik.yml
-      ansible.builtin.shell: |
-        envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
-        mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
-      environment:
-        DOMAIN: "{{ CTF_DOMAIN }}"
-        EMAIL: "{{ CERT_EMAIL }}"
-      changed_when: true
-
-    - name: Build and start Traefik
-      community.docker.docker_compose_v2:
-        project_src: /opt/traefik
-        state: present
-
-# CTFD SETUP
+# SETUP CTFd
     - name: Copy CTFd configuration files
       ansible.builtin.copy:
         src: "./ctfd/"
@@ -90,47 +67,9 @@
         ADMIN_PASS: "{{ ADMIN_PASS }}"
         ADMIN_TOKEN: "{{ ADMIN_TOKEN }}"
       changed_when: true
-
     - name: Build and start CTFd docker
-      community.docker.docker_compose_v2:
-        project_src: /opt/ctfd
+      community.docker.docker_stack:
+        compose: /opt/ctfd/docker-compose.yml
         state: present
+        name: ctfd
 
-# REGISTRY SETUP
-    - name: Copy Registry configuration files
-      ansible.builtin.copy:
-        src: "./registry/"
-        dest: "/opt/registry/"
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Substitute environment variables in docker-compose.yml
-      ansible.builtin.shell: |
-        envsubst < /opt/registry/docker-compose.yml > /opt/registry/docker-compose.yml.tmp
-        mv /opt/registry/docker-compose.yml.tmp /opt/registry/docker-compose.yml
-      environment:
-        DOMAIN: "registry.{{ CTF_DOMAIN }}"
-      changed_when: true
-
-    - name: Create registry htpasswd file
-      community.docker.docker_container:
-        name: htpasswd_generator
-        image: httpd:2
-        command: htpasswd -Bbn {{ REGISTRY_USER }} {{ REGISTRY_PASS }}
-        state: started
-        auto_remove: true
-      register: htpasswd_output
-
-    - name: Save htpasswd file
-      ansible.builtin.copy:
-        content: "{{ htpasswd_output.stdout }}"
-        dest: /opt/registry/auth/htpasswd
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Build and start Registry docker
-      community.docker.docker_compose_v2:
-        project_src: /opt/registry
-        state: present

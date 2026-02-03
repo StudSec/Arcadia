@@ -1,0 +1,253 @@
+x-deploy-one: &x-deploy-one
+  mode: replicated
+  replicas: 1
+  placement:
+    constraints:
+      - node.labels.type == manager
+  resources:
+    limits:
+      memory: 128M
+    reservations:
+      memory: 64M
+
+x-deploy-global: &x-deploy-global
+  mode: global
+  resources:
+    limits:
+      memory: 128M
+    reservations:
+      memory: 64M
+
+networks:
+  net:
+    driver: overlay
+    attachable: true
+  traefik:
+    external: true
+
+volumes:
+  prometheus: {}
+  grafana: {}
+  # alertmanager: {}
+
+configs:
+  node_start:
+    file: ./node-exporter/start.sh
+  node_rules:
+    file: ./prometheus/rules/swarm_node.rules.yml
+  task_rules:
+    file: ./prometheus/rules/swarm_task.rules.yml
+  prometheus_config:
+    file: ./prometheus/conf/prometheus.yml
+  grafana_datasources:
+    file: ./grafana/datasources/prometheus.yaml
+  grafana_dashboards_provisioning:
+    file: ./grafana/swarmprom_dashboards.yml
+  grafana_dash_nodes:
+    file: ./grafana/dashboards/swarmprom-nodes-dash.json
+  grafana_dash_services:
+    file: ./grafana/dashboards/swarmprom-services-dash.json
+  grafana_dash_prometheus:
+    file: ./grafana/dashboards/swarmprom-prometheus-dash.json
+  grafana_dash_node_exporter:
+    file: ./grafana/dashboards/node-exporter-full_rev1.json
+  grafana_dash_container_resources:
+    file: ./grafana/dashboards/container-resources.json
+  grafana_dash_service_health:
+    file: ./grafana/dashboards/service-health.json
+  grafana_dash_cluster_capacity:
+    file: ./grafana/dashboards/cluster-capacity.json
+  grafana_dash_partner_visits:
+    file: ./grafana/dashboards/partner-visits.json
+  grafana_dash_partner_purchases:
+    file: ./grafana/dashboards/partner-purchases.json
+  grafana_start_script:
+    file: ./grafana/start.sh
+
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    networks:
+      - net
+    command: -logtostderr -docker_only
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    deploy:
+      <<: *x-deploy-global
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    networks:
+      - net
+    environment:
+      - NODE_ID={{.Node.ID}}
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /etc/hostname:/etc/nodename
+    configs:
+      - source: node_start
+        target: /start.sh
+        mode: 0755
+    entrypoint: ["/bin/sh", "/start.sh"]
+    command:
+      - "--path.sysfs=/host/sys"
+      - "--path.procfs=/host/proc"
+      - "--collector.textfile.directory=/etc/node-exporter/"
+      - "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--no-collector.ipvs"
+    deploy:
+      <<: *x-deploy-global
+
+  grafana:
+    image: grafana/grafana:11.6.2-security-01
+    user: "0"
+    networks:
+      - net
+      - traefik
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASS}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana:/var/lib/grafana
+    configs:
+      - source: grafana_datasources
+        target: /etc/grafana/provisioning/datasources/datasources.yaml
+      - source: grafana_dashboards_provisioning
+        target: /etc/grafana/provisioning/dashboards/dashboards.yaml
+      - source: grafana_dash_nodes
+        target: /etc/grafana/dashboards/swarmprom-nodes-dash.json
+      - source: grafana_dash_services
+        target: /etc/grafana/dashboards/swarmprom-services-dash.json
+      - source: grafana_dash_prometheus
+        target: /etc/grafana/dashboards/swarmprom-prometheus-dash.json
+      - source: grafana_dash_node_exporter
+        target: /etc/grafana/dashboards/node-exporter-full_rev1.json
+      - source: grafana_dash_container_resources
+        target: /etc/grafana/dashboards/container-resources.json
+      - source: grafana_dash_service_health
+        target: /etc/grafana/dashboards/service-health.json
+      - source: grafana_dash_cluster_capacity
+        target: /etc/grafana/dashboards/cluster-capacity.json
+      - source: grafana_dash_partner_visits
+        target: /etc/grafana/dashboards/partner-visits.json
+      - source: grafana_dash_partner_purchases
+        target: /etc/grafana/dashboards/partner-purchases.json
+      - source: grafana_start_script
+        target: /start.sh
+        mode: 0755
+    entrypoint: ["/bin/sh", "/start.sh"]
+    deploy:
+      <<: *x-deploy-one
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      # https entrypoint
+      - "traefik.http.routers.grafana-https.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana-https.entrypoints=https"
+      - "traefik.http.routers.grafana-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.grafana-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana-https.middlewares=forward-proto@file,grafana-auth"
+      - "traefik.http.routers.grafana-https.service=grafanaHttpsService"
+      - "traefik.http.services.grafanaHttpsService.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.grafana-auth.basicauth.users=admin:${HASHED_PASS}"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    networks:
+      - net
+      - traefik
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}"
+    volumes:
+      - prometheus:/prometheus
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+      - source: node_rules
+        target: /etc/prometheus/swarm_node.rules.yml
+      - source: task_rules
+        target: /etc/prometheus/swarm_task.rules.yml
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.type == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      # https entrypoint
+      - "traefik.http.routers.prometheus-https.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus-https.entrypoints=https"
+      - "traefik.http.routers.prometheus-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.prometheus-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus-https.middlewares=forward-proto@file,prometheus-auth"
+      - "traefik.http.routers.prometheus-https.service=prometheusHttpsService"
+      - "traefik.http.services.prometheusHttpsService.loadbalancer.server.port=9090"
+      - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:${HASHED_PASS}"
+
+  # alertmanager:
+  #   image: prom/alertmanager:v0.27.0
+  #   user: "0"
+  #   networks:
+  #     - default
+  #     - net
+  #     - traefik
+  #   command:
+  #     - "--config.file=/etc/alertmanager/alertmanager.yml"
+  #     - "--storage.path=/alertmanager"
+  #   volumes:
+  #     - alertmanager:/alertmanager
+  #   deploy:
+  #     <<: *x-deploy-one
+  #     labels:
+  #       - "traefik.enable=true"
+  #       # https entrypoint
+  #       - "traefik.http.routers.alertmanager-https.rule=Host(`alertmanager.${DOMAIN}`)"
+  #       - "traefik.http.routers.alertmanager-https.entrypoints=https"
+  #       - "traefik.http.routers.alertmanager-https.tls=true"
+  #       # explicitly use le as certresolver
+  #       - "traefik.http.routers.alertmanager-https.tls.certresolver=letsencrypt"
+  #       - "traefik.http.routers.alertmanager-https.middlewares=forward-proto@file,alertmanager-auth"
+  #       - "traefik.http.routers.alertmanager-https.service=alertmanagerHttpsService"
+  #       - "traefik.http.services.alertmanagerHttpsService.loadbalancer.server.port=9093"
+  #       - "traefik.http.middlewares.alertmanager-auth.basicauth.users=admin:${HASHED_PASS}"
+
+  # karma:
+  #   image: ghcr.io/prymitive/karma:v0.120
+  #   networks:
+  #     - default
+  #     - net
+  #     - traefik
+  #   environment:
+  #     - "ALERTMANAGER_URIS=default:http://alertmanager:9093"
+  #   deploy:
+  #     <<: *x-deploy-one
+  #     labels:
+  #       - "traefik.enable=true"
+  #       # https entrypoint
+  #       - "traefik.http.routers.karma-https.rule=Host(`karma.${DOMAIN}`)"
+  #       - "traefik.http.routers.karma-https.entrypoints=https"
+  #       - "traefik.http.routers.karma-https.tls=true"
+  #       # explicitly use le as certresolver
+  #       - "traefik.http.routers.karma-https.tls.certresolver=letsencrypt"
+  #       - "traefik.http.routers.karma-https.middlewares=forward-proto@file,karma-auth"
+  #       - "traefik.http.routers.karma-https.service=karmaHttpsService"
+  #       - "traefik.http.services.karmaHttpsService.loadbalancer.server.port=8080"
+  #       - "traefik.http.middlewares.karma-auth.basicauth.users=admin:${HASHED_PASS}"
