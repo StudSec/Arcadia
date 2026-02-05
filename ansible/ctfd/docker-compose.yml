@@ -25,9 +25,10 @@ services:
       - ACCESS_LOG=-
       - ERROR_LOG=-
       - REVERSE_PROXY=true
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=$ADMIN_PASS
-      - ADMIN_TOKEN=$ADMIN_TOKEN
+      - PRESET_ADMIN_USER=admin
+      - PRESET_ADMIN_EMAIL=changeme@example.com
+      - PRESET_ADMIN_PASSWORD=$ADMIN_PASS
+      - PRESET_ADMIN_TOKEN=$ADMIN_TOKEN
     volumes:
       - ./data/logs:/var/log/CTFd
       - ./data/uploads:/var/uploads

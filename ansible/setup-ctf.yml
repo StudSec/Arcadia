@@ -32,6 +32,13 @@
         labels:
           type: ctf
 
+- name: CTF - Deploy CTFd
+  hosts: manager
+  remote_user: root
+  become: true
+  vars_files:
+    - .env.yml
+  tasks:
 # SETUP CTFd
     - name: Copy CTFd configuration files
       ansible.builtin.copy:
@@ -64,12 +71,11 @@
       environment:
         DOMAIN: "{{ CTF_DOMAIN }}"
         SECRET_KEY: "{{ SECRET_KEY }}"
-        ADMIN_PASS: "{{ ADMIN_PASS }}"
-        ADMIN_TOKEN: "{{ ADMIN_TOKEN }}"
+        PRESET_ADMIN_PASS: "{{ ADMIN_PASS }}"
+        PRESET_ADMIN_TOKEN: "{{ ADMIN_TOKEN }}"
       changed_when: true
     - name: Build and start CTFd docker
       community.docker.docker_stack:
         compose: /opt/ctfd/docker-compose.yml
         state: present
         name: ctfd
-

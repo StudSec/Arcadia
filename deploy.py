@@ -46,8 +46,6 @@ def create_env(args: Namespace):
                 f"CTF_DOMAIN: {ctf_domain}\n",
                 f"CHALLS_DOMAIN: {challs_domain}\n",
                 f"CERT_EMAIL: {cert_email}\n",
-                "REGISTRY_USER: admin\n",
-                f"REGISTRY_PASS: {secrets.token_urlsafe(32)}\n",
                 f"SECRET_KEY: {secrets.token_urlsafe(32)}\n",
                 f"CHALL_REPO: {chall_repo}\n",
                 f"ADMIN_PASS: {admin_pass}\n",

@@ -33,11 +33,11 @@
     - name: Login to remote Docker registry
       community.docker.docker_login:
         registry_url: "registry.{{ CTF_DOMAIN }}"
-        username: "{{ REGISTRY_USER }}"
-        password: "{{ REGISTRY_PASS }}"
+        username: "admin"
+        password: "{{ ADMIN_PASS }}"
 
 - name: Challs - Deploy challenges
-  hosts: challs[0]
+  hosts: manager
   remote_user: root
   become: true
   vars_files:

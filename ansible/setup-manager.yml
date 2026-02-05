@@ -150,8 +150,8 @@
     - name: Create registry htpasswd file
       community.general.htpasswd:
         path: /opt/registry/auth/htpasswd
-        name: "{{ REGISTRY_USER }}"
-        password: "{{ REGISTRY_PASS }}"
+        name: "admin"
+        password: "{{ ADMIN_PASS }}"
         crypt_scheme: bcrypt
         owner: root
         group: root
