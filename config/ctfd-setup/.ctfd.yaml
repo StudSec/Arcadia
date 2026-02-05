@@ -1,12 +1,12 @@
 admin:
   name: "admin"
-  email: "noreply@studsec.nl"
+  email: "changeme@example.com"
   password:
     from_env: ADMIN_PASSWORD
 
 appearance:
-  name: "StudSec Challenges"
-  description: "CTFd instance"
+  name: "HackHerQuest 2026"
+  description: "The HackHerQuest 2026 CTF"
 
 theme:
   logo:
@@ -26,6 +26,8 @@ settings:
   registration_visibility: private
 
 accounts:
+  #   # Team creation was set to false in production as teams where created ahead of the event,
+  #   # thanks to a qualification round.
   team_creation: false
   team_disbanding: "disabled"
   name_changes: false
@@ -33,6 +35,9 @@ accounts:
 
 time:
   view_after: true
+  start: "2026-02-07T13:30:00Z"
+  end: "2026-02-07T16:30:00Z"
+  freeze: "2026-02-07T16:00:00Z"
 
 legal:
   tos:
@@ -40,12 +45,7 @@ legal:
       from_file: md/tos.md
 
 # If set to 'teams', make sure to decide on the team_creation setting below.
-mode: users
-
-# accounts:
-#   # Team creation was set to false in production as teams where created ahead of the event,
-#   # thanks to a qualification round.
-#   team_creation: true
+mode: teams
 
 pages:
   additional:
@@ -56,11 +56,10 @@ pages:
         from_file: md/getting-started.md
     - title: "Home"
       route: "index"
-      # content:
-      # from_file: html/index.html
-      content: |
-        <script>window.location.href = "/challenges";</script>
-
+      content:
+        from_file: html/index.html
+      # content: |
+      # <script>window.location.href = "/challenges";</script>
 # uploads:
 #   - file:
 #       from_file: images/nbc.png

@@ -1,14 +1,26 @@
 <style id="theme-color">
     :root {
-        --theme-color: #0077b3;
+        --purple: #5a00d0;
+        --bright-pink: #ff0080;
+        --dark-pink: #d41ea6;
+        --darker-pink: #a1157e;
     }
 
     .navbar {
-        background-color: var(--theme-color) !important;
+        background: linear-gradient(90deg, var(--purple), var(--bright-pink)) !important;
     }
 
     .jumbotron {
-        background-color: var(--theme-color) !important;
+        background: linear-gradient(90deg, var(--purple), var(--bright-pink)) !important;
+    }
+
+    .challenge-button {
+        background-color: var(--dark-pink) !important;
+    }
+
+    .challenge-button:hover,
+    .challenge-button:active {
+        background-color: var(--darker-pink) !important;
     }
 
     .footer {
