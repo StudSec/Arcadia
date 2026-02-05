@@ -95,6 +95,14 @@
       ansible.builtin.pip:
         name: jsondiff
         executable: pip3
+
+    - name: Create net swarm network
+      community.docker.docker_network:
+        name: net
+        driver: overlay
+        scope: swarm
+        state: present
+
 # TRAEFIK SETUP
     - name: Copy Traefik configuration files
       ansible.builtin.copy:
