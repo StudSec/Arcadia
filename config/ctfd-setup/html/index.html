@@ -2,7 +2,7 @@
     style="min-height: 50vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
     <div class="container text-center">
         <img src="https://github.com/StudSec/Arcadia/blob/hackherquest/config/ctfd-setup/images/logo.png?raw=true"
-            alt="CTF Logo" style="max-height: 350px; margin-bottom: 30px; margin-top: 20vh; width: auto;">
+            alt="CTF Logo" style="max-height: max(150px, 15vw); margin-bottom: 30px; margin-top: 20vh; width: auto;">
 
         <h1 id="status-title" style="margin-bottom: 20px;">Loading...</h1>
         <div id="timer-display" style="font-size: 3em; font-family: monospace; font-weight: bold;">
@@ -34,7 +34,7 @@
 
             // Find the distance between now and the count down date
             var timeTillStart = start - now;
-            var timeTillEnd = end * 1000;
+            var timeTillEnd = end - now;
 
             if (timeTillEnd < 0) {
                 titleElem.innerText = "The CTF is over!";

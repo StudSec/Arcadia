@@ -30,8 +30,16 @@ accounts:
   #   # thanks to a qualification round.
   team_creation: false
   team_disbanding: "disabled"
+  team_size: 4
   name_changes: false
-  incorrect_submissions_per_minute: 10
+  incorrect_submissions_per_minute: 20
+
+challenges:
+  view_self_submissions: false
+  max_attempts_behavior: "timeout"
+  max_attempts_timeout: 60
+  hints_free_public_access: false
+  challenge_ratings: "disabled"
 
 time:
   view_after: true
