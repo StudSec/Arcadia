@@ -45,6 +45,12 @@
     - .env.yml
 
   tasks:
+    - name: Login to remote Docker registry
+      community.docker.docker_login:
+        registry_url: "registry.{{ CTF_DOMAIN }}"
+        username: "admin"
+        password: "{{ ADMIN_PASS }}"
+
     - name: Clone challenges repository
       ansible.builtin.git:
         repo: "{{ CHALL_REPO }}"
