@@ -10,7 +10,7 @@ services:
     volumes:
       - /opt/registry:/var/lib/registry
     networks:
-      traefik:
+      traefik-manager:
     deploy:
       replicas: 1
       resources:
@@ -21,19 +21,19 @@ services:
       placement:
         constraints:
           - node.labels.type == manager
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik"
-        # https entrypoint
-        - "traefik.http.routers.registry-https.rule=Host(`${DOMAIN}`)"
-        - "traefik.http.routers.registry-https.entrypoints=https"
-        - "traefik.http.routers.registry-https.tls=true"
-        # explicitly use le as certresolver
-        - "traefik.http.routers.registry-https.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.registry-https.middlewares=forward-proto@file"
-        - "traefik.http.routers.registry-https.service=registryHttpsService"
-        - "traefik.http.services.registryHttpsService.loadbalancer.server.port=5000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-manager"
+      # https entrypoint
+      - "traefik.http.routers.registry-https.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.registry-https.entrypoints=https"
+      - "traefik.http.routers.registry-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.registry-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.registry-https.middlewares=forward-proto@file"
+      - "traefik.http.routers.registry-https.service=registryHttpsService"
+      - "traefik.http.services.registryHttpsService.loadbalancer.server.port=5000"
 
 networks:
-  traefik:
+  traefik-manager:
     external: true

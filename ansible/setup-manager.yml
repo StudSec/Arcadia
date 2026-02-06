@@ -4,6 +4,8 @@
   become: true
   vars_files:
     - .env.yml
+  tags:
+    - setup
 
   vars:
     pip_install_packages:
@@ -104,40 +106,12 @@
         state: present
 
 # TRAEFIK SETUP
-    - name: Ensure traefik directory exists
-      ansible.builtin.file:
-        path: "/opt/traefik"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
+    - name: Set placement variable
+      ansible.builtin.set_fact:
+        placement: manager
 
-    - name: Copy Traefik configuration files
-      ansible.posix.synchronize:
-        src: "./traefik/"
-        dest: "/opt/traefik/"
-        recursive: true
-
-    - name: Substitute environment variables in docker-compose.yml
-      ansible.builtin.shell: |
-        envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
-        mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
-      environment:
-        EMAIL: "{{ CERT_EMAIL }}"
-      changed_when: true
-
-    - name: Create traefik swarm network
-      community.docker.docker_network:
-        name: traefik
-        driver: overlay
-        scope: swarm
-        state: present
-
-    - name: Build and start Traefik
-      community.docker.docker_stack:
-        compose: /opt/traefik/docker-compose.yml
-        state: present
-        name: traefik
+    - name: Setup Traefik for the manager node
+      ansible.builtin.import_tasks: traefik/ansible.yml
 
 # REGISTRY SETUP
     - name: Ensure Registry directory exists

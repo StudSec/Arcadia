@@ -15,12 +15,18 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik"
+      - "--providers.docker.network=traefik-$PLACEMENT"
     ports:
-      # The HTTP port
-      - "80:80"
-      # HTTPS also
-      - "443:443"
+      # The HTTP port (host mode)
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      # HTTPS also (host mode)
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
       # publish The Web UI (enabled by --api.insecure=true)
       # on a public port, uncomment to be able to reach it without DNS
       # but only for testing purposes!
@@ -31,7 +37,7 @@ services:
       # acme.json for le challenges
       - acme-data:/letsencrypt
     networks:
-      - traefik
+      - traefik-$PLACEMENT
       - net
     deploy:
       replicas: 1
@@ -42,13 +48,13 @@ services:
           memory: 64M
       placement:
         constraints:
-          - node.labels.type == manager
+          - node.labels.type == $PLACEMENT
 
 volumes:
   acme-data:
 
 networks:
-  traefik:
+  traefik-$PLACEMENT:
     external: true
   net:
     external: true

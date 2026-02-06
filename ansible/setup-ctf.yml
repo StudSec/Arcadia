@@ -4,6 +4,8 @@
   become: true
   vars_files:
     - .env.yml
+  tags:
+    - setup
 
   vars:
     pip_install_packages:
@@ -25,13 +27,34 @@
     - geerlingguy.pip
     - geerlingguy.docker
 
+- name: CTF - CTFd setup
+  hosts: ctf
+  remote_user: root
+  become: true
+  vars_files:
+    - .env.yml
+
   tasks:
+    - name: Install jsondiff for docker_stack module
+      ansible.builtin.pip:
+        name: jsondiff
+        executable: pip3
+
     - name: Set ctf label
       community.docker.docker_node:
         hostname: "{{ ansible_hostname }}"
+        role: manager
         labels:
           type: ctf
       delegate_to: "{{ groups['manager'][0] }}"
+
+    # TRAEFIK SETUP
+    - name: Set placement variable
+      ansible.builtin.set_fact:
+        placement: ctf
+
+    - name: Setup Traefik for the manager node
+      ansible.builtin.import_tasks: traefik/ansible.yml
 
     - name: Ensure CTFd directory exists
       ansible.builtin.file:
@@ -73,28 +96,6 @@
       ansible.posix.synchronize:
         src: "../config/ctfd-setup/"
         dest: "/opt/ctfd/ctfd-setup/"
-        recursive: true
-
-- name: CTF - Deploy CTFd
-  hosts: manager
-  remote_user: root
-  become: true
-  vars_files:
-    - .env.yml
-  tasks:
-# SETUP CTFd
-    - name: Ensure CTFd directory exists
-      ansible.builtin.file:
-        path: "/opt/ctfd"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Copy CTFd configuration files
-      ansible.posix.synchronize:
-        src: "./ctfd/"
-        dest: "/opt/ctfd/"
         recursive: true
 
     - name: Substitute environment variables in docker-compose.yml

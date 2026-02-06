@@ -1,5 +1,6 @@
 x-deployment: &deployment
   replicas: 1
+  endpoint_mode: dnsrr
   resources:
     limits:
       memory: 2048M
@@ -37,27 +38,28 @@ services:
       - cache
     healthcheck:
       test: python3 -c 'import requests; requests.get("http://localhost:8000")'
-      interval: 10s
+      interval: 30s
       retries: 3
       timeout: 15s
     networks:
       internal:
-      traefik:
+      traefik-ctf:
     deploy:
       <<: *deployment
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik"
-        # https entrypoint
-        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
-        - "traefik.http.routers.ctf-https.entrypoints=https"
-        - "traefik.http.routers.ctf-https.tls=true"
-        # explicitly use le as certresolver
-        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
-        # Needed for ctfd behind reverse proxy
-        - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
-        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
-        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.lbswarm=true"
+      - "traefik.docker.network=traefik-ctf"
+      # https entrypoint
+      - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.ctf-https.entrypoints=https"
+      - "traefik.http.routers.ctf-https.tls=true"
+      # explicitly use le as certresolver
+      - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+      # Needed for ctfd behind reverse proxy
+      - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
+      - "traefik.http.routers.ctf-https.service=ctfHttpsService"
+      - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
 
   db:
     image: mariadb:10.11
@@ -114,7 +116,7 @@ services:
         condition: on-failure
 
 networks:
-  traefik:
+  traefik-ctf:
     external: true
   internal:
     internal: true

@@ -4,6 +4,8 @@
   become: true
   vars_files:
     - .env.yml
+  tags:
+    - setup
 
   vars:
     pip_install_packages:

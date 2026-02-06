@@ -40,11 +40,17 @@ certificatesResolvers:
       # caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
 
+serversTransport:
+  forwardingTimeouts:
+    dialTimeout: 30s
+    idleConnTimeout: 90s
+  maxIdleConnsPerHost: 200
+
 providers:
   file:
     filename: /etc/traefik/services.yml
     watch: true
   docker:
     exposedByDefault: false
-    swarmMode: true
+    swarmMode: false
     network: traefik
