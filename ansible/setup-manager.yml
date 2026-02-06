@@ -104,13 +104,19 @@
         state: present
 
 # TRAEFIK SETUP
-    - name: Copy Traefik configuration files
-      ansible.builtin.copy:
-        src: "./traefik/"
-        dest: "/opt/traefik/"
+    - name: Ensure traefik directory exists
+      ansible.builtin.file:
+        path: "/opt/traefik"
+        state: directory
         owner: root
         group: root
         mode: "0755"
+
+    - name: Copy Traefik configuration files
+      ansible.posix.synchronize:
+        src: "./traefik/"
+        dest: "/opt/traefik/"
+        recursive: true
 
     - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |
@@ -134,13 +140,19 @@
         name: traefik
 
 # REGISTRY SETUP
-    - name: Copy Registry configuration files
-      ansible.builtin.copy:
-        src: "./registry/"
-        dest: "/opt/registry/"
+    - name: Ensure Registry directory exists
+      ansible.builtin.file:
+        path: "/opt/registry"
+        state: directory
         owner: root
         group: root
         mode: "0755"
+
+    - name: Copy Registry configuration files
+      ansible.posix.synchronize:
+        src: "./registry/"
+        dest: "/opt/registry/"
+        recursive: true
 
     - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |
@@ -173,13 +185,19 @@
 
 
 # MONITORING SETUP
-    - name: Copy Monitoring docker files
-      ansible.builtin.copy:
-        src: "./monitoring/"
-        dest: "/opt/monitoring/"
+    - name: Ensure monitoring directory exists
+      ansible.builtin.file:
+        path: "/opt/monitoring"
+        state: directory
         owner: root
         group: root
         mode: "0755"
+
+    - name: Copy Monitoring docker files
+      ansible.posix.synchronize:
+        src: "./monitoring/"
+        dest: "/opt/monitoring/"
+        recursive: true
 
     - name: Escape $ in hashed password for compose interpolation
       ansible.builtin.set_fact:

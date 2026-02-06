@@ -3,17 +3,8 @@
 # dashboard: true
 #  debug: true
 log:
-  level: DEBUG
+  level: ERROR
 accessLog: {}
-
-# uncomment to enable prometheus export
-# -> https://doc.traefik.io/traefik/observability/metrics/prometheus/
-metrics:
-  prometheus:
-    entryPoint: :8082
-    addEntryPointsLabels: true
-    addRoutersLabels: true
-    addServicesLabels: true
 
 entryPoints:
   http:
@@ -25,6 +16,17 @@ entryPoints:
           scheme: https
   https:
     address: :443
+  metrics:
+    address: ":8082"
+
+# uncomment to enable prometheus export
+# -> https://doc.traefik.io/traefik/observability/metrics/prometheus/
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
 
 certificatesResolvers:
   letsencrypt:
@@ -44,5 +46,5 @@ providers:
     watch: true
   docker:
     exposedByDefault: false
-    swarmMode: false
+    swarmMode: true
     network: traefik

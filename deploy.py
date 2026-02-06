@@ -55,7 +55,7 @@ def create_env(args: Namespace):
         )
 
     with open("ansible/ctfd/ctfd-setup/.env", "w") as f:
-        f.write(f"export ADMIN_PASSWORD='{admin_pass}'\n")
+        f.write(f"ADMIN_PASSWORD={admin_pass}\n")
     print(colored(".env files created!", "green"))
 
 

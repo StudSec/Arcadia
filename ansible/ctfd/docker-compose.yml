@@ -1,14 +1,13 @@
 x-deployment: &deployment
-  deploy:
-    replicas: 1
-    resources:
-      limits:
-        memory: 2048M
-      reservations:
-        memory: 128M
-    placement:
-      constraints:
-        - node.labels.type == ctf
+  replicas: 1
+  resources:
+    limits:
+      memory: 2048M
+    reservations:
+      memory: 128M
+  placement:
+    constraints:
+      - node.labels.type == ctf
 
 services:
   ctfd:
@@ -30,34 +29,35 @@ services:
       - PRESET_ADMIN_PASSWORD=$ADMIN_PASS
       - PRESET_ADMIN_TOKEN=$ADMIN_TOKEN
     volumes:
-      - ./data/logs:/var/log/CTFd
-      - ./data/uploads:/var/uploads
-      - ./plugins:/opt/CTFd/CTFd/plugins
+      - /opt/ctfd/CTFd/data/logs:/var/log/CTFd
+      - /opt/ctfd/CTFd/data/uploads:/var/uploads
+      - /opt/ctfd/CTFd/plugins:/opt/CTFd/CTFd/plugins
     depends_on:
       - db
       - cache
-    labels:
-      - "traefik.enable=true"
-      # https entrypoint
-      - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.ctf-https.entrypoints=https"
-      - "traefik.http.routers.ctf-https.tls=true"
-      # explicitly use le as certresolver
-      - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
-      # Needed for ctfd behind reverse proxy
-      - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
-      - "traefik.http.routers.ctf-https.service=ctfHttpsService"
-      - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
     healthcheck:
       test: python3 -c 'import requests; requests.get("http://localhost:8000")'
       interval: 10s
       retries: 3
       timeout: 15s
     networks:
-      default:
       internal:
       traefik:
-    <<: *deployment
+    deploy:
+      <<: *deployment
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik"
+        # https entrypoint
+        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.ctf-https.entrypoints=https"
+        - "traefik.http.routers.ctf-https.tls=true"
+        # explicitly use le as certresolver
+        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+        # Needed for ctfd behind reverse proxy
+        - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
+        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
+        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
 
   db:
     image: mariadb:10.11
@@ -69,7 +69,7 @@ services:
       - MARIADB_DATABASE=ctfd
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - .data/mysql:/var/lib/mysql
+      - /opt/ctfd/CTFd/.data/mysql:/var/lib/mysql
     networks:
       internal:
     # This command is required to set important mariadb defaults
@@ -81,16 +81,18 @@ services:
         --wait_timeout=28800,
         --log-warnings=0,
       ]
-    <<: *deployment
+    deploy:
+      <<: *deployment
 
   cache:
     image: redis:4
     restart: always
     volumes:
-      - .data/redis:/data
+      - /opt/ctfd/CTFd/.data/redis:/data
     networks:
       internal:
-    <<: *deployment
+    deploy:
+      <<: *deployment
 
   ctfd-setup:
     image: ctferio/ctfd-setup:v1.7.1
@@ -99,19 +101,20 @@ services:
       FILE: /opt/ctfd-setup/.ctfd.yaml
       DIRECTORY: /opt/ctfd-setup
     env_file:
-      - ./ctfd-setup/.env
+      - /opt/ctfd/ctfd-setup/.env
     volumes:
-      - ./ctfd-setup:/opt/ctfd-setup
+      - /opt/ctfd/ctfd-setup:/opt/ctfd-setup
     networks:
       internal:
     depends_on:
-      ctfd:
-        condition: service_healthy
-    <<: *deployment
+      - ctfd
+    deploy:
+      <<: *deployment
+      restart_policy:
+        condition: on-failure
 
 networks:
   traefik:
     external: true
   internal:
     internal: true
-  default:

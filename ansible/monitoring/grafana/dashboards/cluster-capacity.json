@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 1,
+  "id": 7,
   "links": [],
   "panels": [
     {
@@ -429,8 +429,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * ON(instance) GROUP_LEFT(node_name) node_meta * 100",
+          "editorMode": "code",
+          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * ON(instance) GROUP_LEFT(node_name) node_meta * 100\nunless ON(instance)\n(\n  time() - max by (instance) (process_start_time_seconds) < 350\n)",
           "legendFormat": "{{node_name}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -503,8 +505,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(100 - avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) BY (instance) * 100) * ON(instance) GROUP_LEFT(node_name) node_meta",
+          "editorMode": "code",
+          "expr": "(100 - avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) BY (instance) * 100) * ON(instance) GROUP_LEFT(node_name) node_meta\nunless ON(instance)\n(\n  time() - max by (instance) (process_start_time_seconds) < 350\n)",
           "legendFormat": "{{node_name}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -578,7 +582,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"} * 100) * ON(instance) GROUP_LEFT(node_name) node_meta",
+          "expr": "((node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"} * 100) * ON(instance) GROUP_LEFT(node_name) node_meta\nunless ON(instance)\n(\n  time() - max by (instance) (process_start_time_seconds) < 350\n)",
           "legendFormat": "{{node_name}}",
           "range": true,
           "refId": "A"
@@ -840,7 +844,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(node_filesystem_free_bytes{mountpoint=\"/\"} / (deriv(node_filesystem_free_bytes{mountpoint=\"/\"}[1h]) * -1)) / 86400 * ON(instance) GROUP_LEFT(node_name) node_meta",
+          "expr": "(node_filesystem_free_bytes{mountpoint=\"/\"} / (deriv(node_filesystem_free_bytes{mountpoint=\"/\"}[1h]) * -1)) / 86400 * ON(instance) GROUP_LEFT(node_name) node_meta\nunless ON(instance)\n(\n  time() - max by (instance) (process_start_time_seconds) < 350\n)",
           "legendFormat": "{{node_name}}",
           "range": true,
           "refId": "A"

@@ -56,10 +56,8 @@ configs:
     file: ./grafana/dashboards/service-health.json
   grafana_dash_cluster_capacity:
     file: ./grafana/dashboards/cluster-capacity.json
-  grafana_dash_partner_visits:
-    file: ./grafana/dashboards/partner-visits.json
-  grafana_dash_partner_purchases:
-    file: ./grafana/dashboards/partner-purchases.json
+  grafana_dash_traefik:
+    file: ./grafana/dashboards/traefik.json
   grafana_start_script:
     file: ./grafana/start.sh
 
@@ -134,29 +132,27 @@ services:
         target: /etc/grafana/dashboards/service-health.json
       - source: grafana_dash_cluster_capacity
         target: /etc/grafana/dashboards/cluster-capacity.json
-      - source: grafana_dash_partner_visits
-        target: /etc/grafana/dashboards/partner-visits.json
-      - source: grafana_dash_partner_purchases
-        target: /etc/grafana/dashboards/partner-purchases.json
+      - source: grafana_dash_traefik
+        target: /etc/grafana/dashboards/traefik.json
       - source: grafana_start_script
         target: /start.sh
         mode: 0755
     entrypoint: ["/bin/sh", "/start.sh"]
     deploy:
       <<: *x-deploy-one
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      # https entrypoint
-      - "traefik.http.routers.grafana-https.rule=Host(`grafana.${DOMAIN}`)"
-      - "traefik.http.routers.grafana-https.entrypoints=https"
-      - "traefik.http.routers.grafana-https.tls=true"
-      # explicitly use le as certresolver
-      - "traefik.http.routers.grafana-https.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.grafana-https.middlewares=forward-proto@file,grafana-auth"
-      - "traefik.http.routers.grafana-https.service=grafanaHttpsService"
-      - "traefik.http.services.grafanaHttpsService.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.grafana-auth.basicauth.users=admin:${HASHED_PASS}"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik"
+        # https entrypoint
+        - "traefik.http.routers.grafana-https.rule=Host(`grafana.${DOMAIN}`)"
+        - "traefik.http.routers.grafana-https.entrypoints=https"
+        - "traefik.http.routers.grafana-https.tls=true"
+        # explicitly use le as certresolver
+        - "traefik.http.routers.grafana-https.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.grafana-https.middlewares=forward-proto@file,grafana-auth"
+        - "traefik.http.routers.grafana-https.service=grafanaHttpsService"
+        - "traefik.http.services.grafanaHttpsService.loadbalancer.server.port=3000"
+        - "traefik.http.middlewares.grafana-auth.basicauth.users=admin:${HASHED_PASS}"
 
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -187,19 +183,19 @@ services:
           memory: 2048M
         reservations:
           memory: 128M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      # https entrypoint
-      - "traefik.http.routers.prometheus-https.rule=Host(`prometheus.${DOMAIN}`)"
-      - "traefik.http.routers.prometheus-https.entrypoints=https"
-      - "traefik.http.routers.prometheus-https.tls=true"
-      # explicitly use le as certresolver
-      - "traefik.http.routers.prometheus-https.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.prometheus-https.middlewares=forward-proto@file,prometheus-auth"
-      - "traefik.http.routers.prometheus-https.service=prometheusHttpsService"
-      - "traefik.http.services.prometheusHttpsService.loadbalancer.server.port=9090"
-      - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:${HASHED_PASS}"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik"
+        # https entrypoint
+        - "traefik.http.routers.prometheus-https.rule=Host(`prometheus.${DOMAIN}`)"
+        - "traefik.http.routers.prometheus-https.entrypoints=https"
+        - "traefik.http.routers.prometheus-https.tls=true"
+        # explicitly use le as certresolver
+        - "traefik.http.routers.prometheus-https.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.prometheus-https.middlewares=forward-proto@file,prometheus-auth"
+        - "traefik.http.routers.prometheus-https.service=prometheusHttpsService"
+        - "traefik.http.services.prometheusHttpsService.loadbalancer.server.port=9090"
+        - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:${HASHED_PASS}"
 
   # dockerd-exporter:
   #   image: alpine/socat

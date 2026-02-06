@@ -31,6 +31,49 @@
         hostname: "{{ ansible_hostname }}"
         labels:
           type: ctf
+      delegate_to: "{{ groups['manager'][0] }}"
+
+    - name: Ensure CTFd directory exists
+      ansible.builtin.file:
+        path: "/opt/ctfd"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy CTFd configuration files
+      ansible.posix.synchronize:
+        src: "./ctfd/"
+        dest: "/opt/ctfd/"
+        recursive: true
+
+    - name: Ensure CTFd plugin directory exists
+      ansible.builtin.file:
+        path: "/opt/ctfd/CTFd/plugins"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy CTFd plugins
+      ansible.posix.synchronize:
+        src: "../config/ctfd/"
+        dest: "/opt/ctfd/CTFd/"
+        recursive: true
+
+    - name: Ensure ctfd-setup directory exists
+      ansible.builtin.file:
+        path: "/opt/ctfd/ctfd-setup"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy ctfd-setup files
+      ansible.posix.synchronize:
+        src: "../config/ctfd-setup/"
+        dest: "/opt/ctfd/ctfd-setup/"
+        recursive: true
 
 - name: CTF - Deploy CTFd
   hosts: manager
@@ -40,29 +83,19 @@
     - .env.yml
   tasks:
 # SETUP CTFd
+    - name: Ensure CTFd directory exists
+      ansible.builtin.file:
+        path: "/opt/ctfd"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: Copy CTFd configuration files
-      ansible.builtin.copy:
+      ansible.posix.synchronize:
         src: "./ctfd/"
         dest: "/opt/ctfd/"
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Copy CTFd plugins
-      ansible.builtin.copy:
-        src: "../config/ctfd-plugins/"
-        dest: "/opt/ctfd/CTFd/plugins/"
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Copy ctfd-setup files
-      ansible.builtin.copy:
-        src: "../config/ctfd-setup/"
-        dest: "/opt/ctfd/ctfd-setup/"
-        owner: root
-        group: root
-        mode: "0755"
+        recursive: true
 
     - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |
@@ -71,9 +104,10 @@
       environment:
         DOMAIN: "{{ CTF_DOMAIN }}"
         SECRET_KEY: "{{ SECRET_KEY }}"
-        PRESET_ADMIN_PASS: "{{ ADMIN_PASS }}"
-        PRESET_ADMIN_TOKEN: "{{ ADMIN_TOKEN }}"
+        ADMIN_PASS: "{{ ADMIN_PASS }}"
+        ADMIN_TOKEN: "{{ ADMIN_TOKEN }}"
       changed_when: true
+
     - name: Build and start CTFd docker
       community.docker.docker_stack:
         compose: /opt/ctfd/docker-compose.yml

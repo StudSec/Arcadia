@@ -29,6 +29,7 @@
         hostname: "{{ ansible_hostname }}"
         labels:
           type: challs
+      delegate_to: "{{ groups['manager'][0] }}"
 
     - name: Login to remote Docker registry
       community.docker.docker_login:
