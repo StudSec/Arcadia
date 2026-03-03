@@ -5,8 +5,8 @@ admin:
     from_env: ADMIN_PASSWORD
 
 appearance:
-  name: "StudSec Challenges"
-  description: "CTFd instance"
+  name: "StudSec CTF"
+  description: "StudSec CTF"
 
 theme:
   logo:
@@ -20,16 +20,24 @@ theme:
     from_file: html/theme-footer.html
 
 settings:
-  challenge_visibility: private
-  account_visibility: private
-  score_visibility: private
-  registration_visibility: private
+  challenge_visibility: public
+  account_visibility: public
+  score_visibility: public
+  registration_visibility: public
 
 accounts:
   team_creation: false
   team_disbanding: "disabled"
-  name_changes: false
-  incorrect_submissions_per_minute: 10
+  name_changes: true
+  num_teams: 0
+  incorrect_submissions_per_minute: 20
+
+challenges:
+  view_self_submissions: false
+  max_attempts_behavior: "timeout"
+  max_attempts_timeout: 60
+  hints_free_public_access: false
+  challenge_ratings: "disabled"
 
 time:
   view_after: true
@@ -41,11 +49,6 @@ legal:
 
 # If set to 'teams', make sure to decide on the team_creation setting below.
 mode: users
-
-# accounts:
-#   # Team creation was set to false in production as teams where created ahead of the event,
-#   # thanks to a qualification round.
-#   team_creation: true
 
 pages:
   additional:
@@ -60,26 +63,3 @@ pages:
       # from_file: html/index.html
       content: |
         <script>window.location.href = "/challenges";</script>
-
-# uploads:
-#   - file:
-#       from_file: images/nbc.png
-#     location: images/nbc.png
-#   - file:
-#       from_file: images/pec-white.png
-#     location: images/pec-white.png
-#   - file:
-#       from_file: images/pec.png
-#     location: images/pec.png
-#   - file:
-#       from_file: images/rm-pro-white.svg
-#     location: images/rm-pro-white.svg
-#   - file:
-#       from_file: images/rm-pro.svg
-#     location: images/rm-pro.svg
-#   - file:
-#       from_file: images/synacktiv-white.png
-#     location: images/synacktiv-white.png
-#   - file:
-#       from_file: images/synacktiv.png
-#     location: images/synacktiv.png
