@@ -1,0 +1,33 @@
+- name: Ensure monitoring directory exists
+  ansible.builtin.file:
+    path: "/opt/monitoring"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy Monitoring docker files
+  ansible.posix.synchronize:
+    src: "./monitoring/"
+    dest: "/opt/monitoring/"
+    recursive: true
+
+- name: Escape $ in hashed password for compose interpolation
+  ansible.builtin.set_fact:
+    hashed_pass_escaped: "{{ HASHED_PASS | replace('$', '$$') }}"
+
+- name: Substitute environment variables in docker-compose.yml
+  ansible.builtin.shell: |
+    envsubst < /opt/monitoring/docker-compose.yml > /opt/monitoring/docker-compose.yml.tmp
+    mv /opt/monitoring/docker-compose.yml.tmp /opt/monitoring/docker-compose.yml
+  environment:
+    DOMAIN: "{{ CTF_DOMAIN }}"
+    ADMIN_PASS: "{{ ADMIN_PASS }}"
+    HASHED_PASS: "{{ hashed_pass_escaped }}"
+  changed_when: true
+
+- name: Build and start Monitoring docker
+  community.docker.docker_stack:
+    compose: /opt/monitoring/docker-compose.yml
+    state: present
+    name: monitoring

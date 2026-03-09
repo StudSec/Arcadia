@@ -33,12 +33,19 @@
   become: true
   vars_files:
     - .env.yml
-
+  tags:
+    - ctfd
   tasks:
     - name: Install jsondiff for docker_stack module
       ansible.builtin.pip:
         name: jsondiff
         executable: pip3
+
+    - name: Login to remote Docker registry
+      community.docker.docker_login:
+        registry_url: "registry.{{ CTF_DOMAIN }}"
+        username: "admin"
+        password: "{{ ADMIN_PASS }}"
 
     - name: Set ctf label
       community.docker.docker_node:
@@ -48,55 +55,47 @@
           type: ctf
       delegate_to: "{{ groups['manager'][0] }}"
 
-    # TRAEFIK SETUP
-    - name: Set placement variable
-      ansible.builtin.set_fact:
-        placement: ctf
-
-    - name: Setup Traefik for the manager node
-      ansible.builtin.import_tasks: traefik/ansible.yml
-
-    - name: Ensure CTFd directory exists
-      ansible.builtin.file:
-        path: "/opt/ctfd"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
     - name: Copy CTFd configuration files
       ansible.posix.synchronize:
         src: "./ctfd/"
         dest: "/opt/ctfd/"
         recursive: true
 
-    - name: Ensure CTFd plugin directory exists
-      ansible.builtin.file:
-        path: "/opt/ctfd/CTFd/plugins"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Copy CTFd plugins
+    - name: Copy CTFd data files
       ansible.posix.synchronize:
         src: "../config/ctfd/"
         dest: "/opt/ctfd/CTFd/"
         recursive: true
-
-    - name: Ensure ctfd-setup directory exists
-      ansible.builtin.file:
-        path: "/opt/ctfd/ctfd-setup"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
 
     - name: Copy ctfd-setup files
       ansible.posix.synchronize:
         src: "../config/ctfd-setup/"
         dest: "/opt/ctfd/ctfd-setup/"
         recursive: true
+
+    - name: Copy chall-manager files
+      ansible.posix.synchronize:
+        src: "../config/chall-manager/"
+        dest: "/opt/ctfd/chall-manager/"
+        recursive: true
+
+    - name: Create keys for chall-manager
+      community.crypto.openssl_privatekey:
+        path: "/opt/ctfd/chall-manager/id_ed25519"
+        size: 256
+        type: Ed25519
+
+    - name: Create public key for chall-manager
+      community.crypto.openssl_publickey:
+        path: "/opt/ctfd/chall-manager/id_ed25519.pub"
+        privatekey_path: "/opt/ctfd/chall-manager/id_ed25519"
+
+    - name: Add public key to authorized_keys for all chall nodes
+      ansible.posix.authorized_key:
+        key: "{{ lookup('file', '/opt/ctfd/chall-manager/id_ed25519.pub') }}"
+        user: root
+        state: present
+      delegate_to: "{{ groups['chall'] }}"
 
     - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |
@@ -114,3 +113,25 @@
         compose: /opt/ctfd/docker-compose.yml
         state: present
         name: ctfd
+
+    - name: Install go
+      ansible.builtin.apt:
+        name: golang
+        state: present
+
+    - name: Install oras
+      ansible.builtin.shell: |
+        VERSION="1.3.0"
+        curl -LO "https://github.com/oras-project/oras/releases/download/v${VERSION}/oras_${VERSION}_darwin_arm64.tar.gz"
+        mkdir -p oras-install/
+        tar -zxf oras_${VERSION}_*.tar.gz -C oras-install/
+        sudo mv oras-install/oras /usr/local/bin/
+        rm -rf oras_${VERSION}_*.tar.gz oras-install/
+      changed_when: true
+
+    - name: Install pulumi scenario
+      ansible.builtin.shell: |
+        cd /opt/ctfd/chall-manager && ./build.sh
+      environment:
+        REGISTRY: "registry.{{ CTF_DOMAIN }}/"
+      changed_when: true

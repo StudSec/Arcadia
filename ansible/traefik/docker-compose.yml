@@ -6,16 +6,16 @@ configs:
 
 services:
   reverse-proxy:
-    image: traefik:v2.11
+    image: traefik:3
     configs:
       - source: services-yml
         target: /etc/traefik/services.yml
       - source: traefik-yml
         target: /etc/traefik/traefik.yml
     command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik-$PLACEMENT"
+      - "--providers.swarm=true"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=traefik-public"
     ports:
       # The HTTP port (host mode)
       - target: 80
@@ -37,7 +37,7 @@ services:
       # acme.json for le challenges
       - acme-data:/letsencrypt
     networks:
-      - traefik-$PLACEMENT
+      - traefik-public
       - net
     deploy:
       replicas: 1
@@ -48,13 +48,13 @@ services:
           memory: 64M
       placement:
         constraints:
-          - node.labels.type == $PLACEMENT
+          - node.labels.type == manager
 
 volumes:
   acme-data:
 
 networks:
-  traefik-$PLACEMENT:
+  traefik-public:
     external: true
   net:
     external: true

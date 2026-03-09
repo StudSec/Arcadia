@@ -29,6 +29,7 @@
     - name: Set challs label
       community.docker.docker_node:
         hostname: "{{ ansible_hostname }}"
+        role: manager
         labels:
           type: challs
       delegate_to: "{{ groups['manager'][0] }}"
@@ -45,14 +46,7 @@
   become: true
   vars_files:
     - .env.yml
-
   tasks:
-    - name: Login to remote Docker registry
-      community.docker.docker_login:
-        registry_url: "registry.{{ CTF_DOMAIN }}"
-        username: "admin"
-        password: "{{ ADMIN_PASS }}"
-
     - name: Clone challenges repository
       ansible.builtin.git:
         repo: "{{ CHALL_REPO }}"

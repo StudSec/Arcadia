@@ -1,0 +1,42 @@
+- name: Ensure Registry directory exists
+  ansible.builtin.file:
+    path: "/opt/registry"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy Registry configuration files
+  ansible.posix.synchronize:
+    src: "./registry/"
+    dest: "/opt/registry/"
+    recursive: true
+
+- name: Substitute environment variables in docker-compose.yml
+  ansible.builtin.shell: |
+    envsubst < /opt/registry/docker-compose.yml > /opt/registry/docker-compose.yml.tmp
+    mv /opt/registry/docker-compose.yml.tmp /opt/registry/docker-compose.yml
+  environment:
+    DOMAIN: "registry.{{ CTF_DOMAIN }}"
+  changed_when: true
+
+- name: Install passlib for htpasswd module
+  ansible.builtin.pip:
+    name: passlib
+    executable: pip3
+
+- name: Create registry htpasswd file
+  community.general.htpasswd:
+    path: /opt/registry/auth/htpasswd
+    name: "admin"
+    password: "{{ ADMIN_PASS }}"
+    crypt_scheme: bcrypt
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Build and start Registry docker
+  community.docker.docker_stack:
+    compose: /opt/registry/docker-compose.yml
+    state: present
+    name: registry

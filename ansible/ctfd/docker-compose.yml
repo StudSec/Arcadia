@@ -12,7 +12,7 @@ x-deployment: &deployment
 
 services:
   ctfd:
-    image: ctfd/ctfd:3.8.1
+    image: ctfd/ctfd:3.8.2
     user: root
     restart: always
     environment:
@@ -29,6 +29,8 @@ services:
       - PRESET_ADMIN_EMAIL=changeme@example.com
       - PRESET_ADMIN_PASSWORD=$ADMIN_PASS
       - PRESET_ADMIN_TOKEN=$ADMIN_TOKEN
+      - PLUGIN_SETTINGS_CM_API_URL=http://chall-manager:8080
+      - PLUGIN_SETTINGS_CM_MANA_TOTAL=10
     volumes:
       - /opt/ctfd/CTFd/data/logs:/var/log/CTFd
       - /opt/ctfd/CTFd/data/uploads:/var/uploads
@@ -36,30 +38,31 @@ services:
     depends_on:
       - db
       - cache
+      - chall-manager
     healthcheck:
       test: python3 -c 'import requests; requests.get("http://localhost:8000")'
-      interval: 30s
+      interval: 10s
       retries: 3
-      timeout: 15s
+      timeout: 10s
     networks:
       internal:
-      traefik-ctf:
+      traefik-public:
     deploy:
       <<: *deployment
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.lbswarm=true"
-      - "traefik.docker.network=traefik-ctf"
-      # https entrypoint
-      - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.ctf-https.entrypoints=https"
-      - "traefik.http.routers.ctf-https.tls=true"
-      # explicitly use le as certresolver
-      - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
-      # Needed for ctfd behind reverse proxy
-      - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
-      - "traefik.http.routers.ctf-https.service=ctfHttpsService"
-      - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.lbswarm=true"
+        - "traefik.swarm.network=traefik-public"
+        # https entrypoint
+        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.ctf-https.entrypoints=https"
+        - "traefik.http.routers.ctf-https.tls=true"
+        # explicitly use le as certresolver
+        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+        # Needed for ctfd behind reverse proxy
+        - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
+        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
+        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
 
   db:
     image: mariadb:10.11
@@ -96,6 +99,22 @@ services:
     deploy:
       <<: *deployment
 
+  chall-manager:
+    image: ctferio/chall-manager:v0.5.3
+    volumes:
+      - /opt/ctfd/chall-manager/id_ed25519:/root/.ssh/id_ed25519
+      - /opt/ctfd/chall-manager/id_ed25519.pub:/root/.ssh/id_ed25519.pub
+    deploy:
+      <<: *deployment
+
+  chall-manager-janitor:
+    image: ctferio/chall-manager-janitor:v0.5.3
+    environment:
+      URL: chall-manager:8080
+      TICKER: 1m
+    deploy:
+      <<: *deployment
+
   ctfd-setup:
     image: ctferio/ctfd-setup:v1.7.1
     environment:
@@ -116,7 +135,7 @@ services:
         condition: on-failure
 
 networks:
-  traefik-ctf:
+  traefik-public:
     external: true
   internal:
     internal: true

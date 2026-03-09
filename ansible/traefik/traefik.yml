@@ -50,7 +50,3 @@ providers:
   file:
     filename: /etc/traefik/services.yml
     watch: true
-  docker:
-    exposedByDefault: false
-    swarmMode: false
-    network: traefik
