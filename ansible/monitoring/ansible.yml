@@ -2,8 +2,8 @@
   ansible.builtin.file:
     path: "/srv/monitoring"
     state: directory
-    owner: root
-    group: root
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: "0755"
 
 - name: Copy Monitoring docker files
@@ -11,6 +11,7 @@
     src: "./monitoring/"
     dest: "/srv/monitoring/"
     recursive: true
+  become: false
 
 - name: Escape $ in hashed password for compose interpolation
   ansible.builtin.set_fact:

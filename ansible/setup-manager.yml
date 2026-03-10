@@ -1,6 +1,5 @@
 - name: Manager - Initialization
-  hosts: all
-  remote_user: root
+  hosts: manager
   become: true
   vars_files:
     - .env.yml
@@ -19,10 +18,16 @@
       # https://serverfault.com/a/1021022
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
+      # no cloud-init, no problem
+      failed_when: false
     - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
       # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
       ansible.builtin.apt:
         update_cache: true
+    - name: Install rsync
+      ansible.builtin.apt:
+        name: rsync
+        state: present
   roles:
     - geerlingguy.pip
     - geerlingguy.docker
@@ -31,7 +36,6 @@
 # SETUP SWARM
 - name: Setup Swarm - swarm manager initialization
   hosts: manager
-  remote_user: root
   become: true
   tags:
     - swarm
@@ -66,7 +70,6 @@
 
 - name: Setup Swarm - swarm workers initialization
   hosts: all
-  remote_user: root
   become: true
   tags:
     - swarm
@@ -81,7 +84,6 @@
 
 - name: Manager - Deploy Traefik
   hosts: manager
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -93,7 +95,6 @@
 
 - name: Manager - Deploy Registry
   hosts: manager
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -105,7 +106,6 @@
 
 - name: Manager - Deploy Monitoring
   hosts: manager
-  remote_user: root
   become: true
   vars_files:
     - .env.yml

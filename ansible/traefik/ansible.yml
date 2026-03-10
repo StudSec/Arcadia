@@ -1,9 +1,9 @@
 - name: Ensure traefik directory exists
   ansible.builtin.file:
-    path: "/opt/traefik"
+    path: "/srv/traefik"
     state: directory
-    owner: root
-    group: root
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: "0755"
 
 - name: Copy Traefik configuration files
@@ -11,6 +11,7 @@
     src: "./traefik/"
     dest: "/srv/traefik/"
     recursive: true
+  become: false
 
 - name: Substitute environment variables in docker-compose.yml
   ansible.builtin.shell: |

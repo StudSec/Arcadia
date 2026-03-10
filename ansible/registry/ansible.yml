@@ -2,18 +2,16 @@
   ansible.builtin.file:
     path: "/srv/registry"
     state: directory
-    owner: root
-    group: root
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: "0755"
 
 - name: Copy Registry configuration files
-  ansible.builtin.copy:
+  ansible.posix.synchronize:
     src: "./registry/"
     dest: "/srv/registry/"
-    owner: root
-    group: root
-    mode: preserve
-    directory_mode: "0755"
+    recursive: true
+  become: false
 
 - name: Substitute environment variables in docker-compose.yml
   ansible.builtin.shell: |
@@ -31,7 +29,7 @@
 
 - name: Create registry htpasswd file
   community.general.htpasswd:
-    path: /opt/registry/auth/htpasswd
+    path: /srv/registry/auth/htpasswd
     name: "admin"
     password: "{{ ADMIN_PASS }}"
     crypt_scheme: bcrypt

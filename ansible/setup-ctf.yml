@@ -1,6 +1,5 @@
 - name: CTF - Setup
   hosts: ctf
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -20,10 +19,15 @@
       # https://serverfault.com/a/1021022
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
+      failed_when: false
     - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
       # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
       ansible.builtin.apt:
         update_cache: true
+    - name: Install rsync
+      ansible.builtin.apt:
+        name: rsync
+        state: present
   roles:
     - geerlingguy.pip
     - geerlingguy.docker
@@ -46,7 +50,6 @@
 
 - name: CTF - CTFd setup
   hosts: ctf
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -63,13 +66,21 @@
   tags:
     - ctfd
   tasks:
+    - name: Ensure ctfd directory exists
+      ansible.builtin.file:
+        path: "/srv/ctfd"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
     - name: Copy CTFd/chall-manager files
       ansible.posix.synchronize:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         recursive: true
-      loop: "{{ ctfd_sync_paths }}"
       become: false
+      loop: "{{ ctfd_sync_paths }}"
 
     - name: Create keys for chall-manager
       community.crypto.openssh_keypair:
@@ -108,7 +119,6 @@
 
 - name: CTF - pulumi setup
   hosts: ctf
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -134,6 +144,7 @@
         chmod +x oras-install/oras
         mv oras-install/oras /usr/local/bin/oras
         rm -rf oras_${VERSION}_linux_amd64.tar.gz oras-install/
+        oras login --username admin --password "{{ ADMIN_PASS }}" "registry.{{ CTF_DOMAIN }}"
       changed_when: true
 
     - name: Install pulumi scenario

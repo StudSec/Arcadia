@@ -102,11 +102,13 @@ services:
     image: ctferio/chall-manager:v0.5.3
     networks:
       internal:
-      traefik-public:
+    environment:
+      OCI_USERNAME: admin
+      OCI_PASSWORD: $ADMIN_PASS
     volumes:
       - /srv/ctfd/chall-manager/id_ed25519:/root/.ssh/id_ed25519
       - /srv/ctfd/chall-manager/id_ed25519.pub:/root/.ssh/id_ed25519.pub
-      - /srv/ctfd/chall-manager/config.json:/root/.docker/config.json:ro
+      - /root/.docker/config.json:/root/.docker/config.json:ro
     deploy:
       <<: *deployment
 
@@ -114,7 +116,6 @@ services:
     image: ctferio/chall-manager-janitor:v0.5.3
     networks:
       internal:
-      traefik-public:
     environment:
       URL: chall-manager:8080
       TICKER: 1m
@@ -140,13 +141,8 @@ services:
       restart_policy:
         condition: on-failure
 
-  registry:
-    image: registry:3
-    networks:
-      internal:
-
 networks:
   traefik-public:
     external: true
   internal:
-    internal: true
+    driver: overlay

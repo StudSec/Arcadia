@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CGO_ENABLED=0 go build -o main main.go
-REGISTRY=${REGISTRY:-"localhost:5000/"}
+REGISTRY=${REGISTRY:-"registry:5000/"}
 
 # custom the tag
 VERSION="latest"

@@ -1,6 +1,5 @@
 - name: Challs - Initialization
   hosts: challs
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -18,10 +17,15 @@
       # https://serverfault.com/a/1021022
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
+      failed_when: false
     - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
       # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
       ansible.builtin.apt:
         update_cache: true
+    - name: Install rsync
+      ansible.builtin.apt:
+        name: rsync
+        state: present
   roles:
     - geerlingguy.git
     - geerlingguy.pip
@@ -44,7 +48,6 @@
 
 - name: Challs - Deploy challenges
   hosts: manager
-  remote_user: root
   become: true
   vars_files:
     - .env.yml
@@ -52,15 +55,15 @@
     - name: Clone challenges repository
       ansible.builtin.git:
         repo: "{{ CHALL_REPO }}"
-        dest: /opt/challs
+        dest: /srv/challs
 
     - name: Install Python dependencies for deploy.py
       ansible.builtin.pip:
-        requirements: /opt/challs/requirements.txt
+        requirements: /srv/challs/requirements.txt
         executable: pip3
         extra_args: --break-system-packages
 
     - name: Deploy challenges with checker.py
       ansible.builtin.command: >
-        python3 /opt/challs/checker.py --run --host {{ CHALLS_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
+        python3 /srv/challs/checker.py --run --host {{ CHALLS_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
       changed_when: true
