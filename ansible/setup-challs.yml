@@ -6,11 +6,10 @@
     - .env.yml
   tags:
     - setup
-
   vars:
+    # installed by geerlingguy.pip
     pip_install_packages:
       - name: docker
-
   environment:
     NEEDRESTART_MODE: automatically
 
@@ -19,7 +18,10 @@
       # https://serverfault.com/a/1021022
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
-
+    - name: Populate Apt's Cache with package definitions to avoid "no such package" errors
+      # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
+      ansible.builtin.apt:
+        update_cache: true
   roles:
     - geerlingguy.git
     - geerlingguy.pip
@@ -56,6 +58,7 @@
       ansible.builtin.pip:
         requirements: /opt/challs/requirements.txt
         executable: pip3
+        extra_args: --break-system-packages
 
     - name: Deploy challenges with checker.py
       ansible.builtin.command: >

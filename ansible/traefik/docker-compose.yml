@@ -48,7 +48,7 @@ services:
           memory: 64M
       placement:
         constraints:
-          - node.labels.type == manager
+          - node.labels.manager == true
 
 volumes:
   acme-data:

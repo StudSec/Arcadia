@@ -3,7 +3,7 @@ x-deploy-one: &x-deploy-one
   replicas: 1
   placement:
     constraints:
-      - node.labels.type == manager
+      - node.labels.manager == true
   resources:
     limits:
       memory: 128M
@@ -177,7 +177,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.labels.type == manager
+          - node.labels.manager
       resources:
         limits:
           memory: 2048M

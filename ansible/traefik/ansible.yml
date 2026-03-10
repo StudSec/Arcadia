@@ -9,15 +9,15 @@
 - name: Copy Traefik configuration files
   ansible.posix.synchronize:
     src: "./traefik/"
-    dest: "/opt/traefik/"
+    dest: "/srv/traefik/"
     recursive: true
 
 - name: Substitute environment variables in docker-compose.yml
   ansible.builtin.shell: |
-    envsubst < /opt/traefik/traefik.yml > /opt/traefik/traefik.yml.tmp
-    mv /opt/traefik/traefik.yml.tmp /opt/traefik/traefik.yml
-    envsubst < /opt/traefik/docker-compose.yml > /opt/traefik/docker-compose.yml.tmp
-    mv /opt/traefik/docker-compose.yml.tmp /opt/traefik/docker-compose.yml
+    envsubst < /srv/traefik/traefik.yml > /srv/traefik/traefik.yml.tmp
+    mv /srv/traefik/traefik.yml.tmp /srv/traefik/traefik.yml
+    envsubst < /srv/traefik/docker-compose.yml > /srv/traefik/docker-compose.yml.tmp
+    mv /srv/traefik/docker-compose.yml.tmp /srv/traefik/docker-compose.yml
   environment:
     EMAIL: "{{ CERT_EMAIL }}"
   changed_when: true
@@ -31,6 +31,6 @@
 
 - name: Build and start Traefik
   community.docker.docker_stack:
-    compose: /opt/traefik/docker-compose.yml
+    compose: /srv/traefik/docker-compose.yml
     state: present
     name: traefik-public

@@ -20,7 +20,7 @@ services:
           memory: 64M
       placement:
         constraints:
-          - node.labels.type == manager
+          - node.labels.manager == true
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=traefik-public"
@@ -30,7 +30,6 @@ services:
         - "traefik.http.routers.registry-https.tls=true"
         # explicitly use le as certresolver
         - "traefik.http.routers.registry-https.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.registry-https.middlewares=forward-proto@file"
         - "traefik.http.routers.registry-https.service=registryHttpsService"
         - "traefik.http.services.registryHttpsService.loadbalancer.server.port=5000"
 

@@ -1,21 +1,24 @@
 - name: Ensure Registry directory exists
   ansible.builtin.file:
-    path: "/opt/registry"
+    path: "/srv/registry"
     state: directory
     owner: root
     group: root
     mode: "0755"
 
 - name: Copy Registry configuration files
-  ansible.posix.synchronize:
+  ansible.builtin.copy:
     src: "./registry/"
-    dest: "/opt/registry/"
-    recursive: true
+    dest: "/srv/registry/"
+    owner: root
+    group: root
+    mode: preserve
+    directory_mode: "0755"
 
 - name: Substitute environment variables in docker-compose.yml
   ansible.builtin.shell: |
-    envsubst < /opt/registry/docker-compose.yml > /opt/registry/docker-compose.yml.tmp
-    mv /opt/registry/docker-compose.yml.tmp /opt/registry/docker-compose.yml
+    envsubst < /srv/registry/docker-compose.yml > /srv/registry/docker-compose.yml.tmp
+    mv /srv/registry/docker-compose.yml.tmp /srv/registry/docker-compose.yml
   environment:
     DOMAIN: "registry.{{ CTF_DOMAIN }}"
   changed_when: true
@@ -24,6 +27,7 @@
   ansible.builtin.pip:
     name: passlib
     executable: pip3
+    extra_args: --break-system-packages
 
 - name: Create registry htpasswd file
   community.general.htpasswd:
@@ -37,6 +41,6 @@
 
 - name: Build and start Registry docker
   community.docker.docker_stack:
-    compose: /opt/registry/docker-compose.yml
+    compose: /srv/registry/docker-compose.yml
     state: present
     name: registry

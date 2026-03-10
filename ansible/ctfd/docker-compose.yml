@@ -1,6 +1,6 @@
 x-deployment: &deployment
   replicas: 1
-  endpoint_mode: dnsrr
+  endpoint_mode: vip
   resources:
     limits:
       memory: 2048M
@@ -8,7 +8,7 @@ x-deployment: &deployment
       memory: 128M
   placement:
     constraints:
-      - node.labels.type == ctf
+      - node.labels.ctf == true
 
 services:
   ctfd:
@@ -32,9 +32,9 @@ services:
       - PLUGIN_SETTINGS_CM_API_URL=http://chall-manager:8080
       - PLUGIN_SETTINGS_CM_MANA_TOTAL=10
     volumes:
-      - /opt/ctfd/CTFd/data/logs:/var/log/CTFd
-      - /opt/ctfd/CTFd/data/uploads:/var/uploads
-      - /opt/ctfd/CTFd/plugins:/opt/CTFd/CTFd/plugins
+      - /srv/ctfd/CTFd/data/logs:/var/log/CTFd
+      - /srv/ctfd/CTFd/data/uploads:/var/uploads
+      - /srv/ctfd/CTFd/plugins:/opt/CTFd/CTFd/plugins
     depends_on:
       - db
       - cache
@@ -51,19 +51,18 @@ services:
       <<: *deployment
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.lbswarm=true"
+        - "traefik.swarm.lbswarm=true"
         - "traefik.swarm.network=traefik-public"
         # https entrypoint
-        - "traefik.http.routers.ctf-https.rule=Host(`${DOMAIN}`)"
-        - "traefik.http.routers.ctf-https.entrypoints=https"
-        - "traefik.http.routers.ctf-https.tls=true"
+        - "traefik.http.routers.ctfd-https.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.ctfd-https.entrypoints=https"
+        - "traefik.http.routers.ctfd-https.tls=true"
         # explicitly use le as certresolver
-        - "traefik.http.routers.ctf-https.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.ctfd-https.tls.certresolver=letsencrypt"
         # Needed for ctfd behind reverse proxy
-        - "traefik.http.routers.ctf-https.middlewares=forward-proto@file"
-        - "traefik.http.routers.ctf-https.service=ctfHttpsService"
-        - "traefik.http.services.ctfHttpsService.loadbalancer.server.port=8000"
-
+        - "traefik.http.routers.ctfd-https.middlewares=forward-proto@file"
+        - "traefik.http.routers.ctfd-https.service=ctfdHttpsService"
+        - "traefik.http.services.ctfdHttpsService.loadbalancer.server.port=8000"
   db:
     image: mariadb:10.11
     restart: always
@@ -74,7 +73,7 @@ services:
       - MARIADB_DATABASE=ctfd
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - /opt/ctfd/CTFd/.data/mysql:/var/lib/mysql
+      - /srv/ctfd/CTFd/.data/mysql:/var/lib/mysql
     networks:
       internal:
     # This command is required to set important mariadb defaults
@@ -93,7 +92,7 @@ services:
     image: redis:4
     restart: always
     volumes:
-      - /opt/ctfd/CTFd/.data/redis:/data
+      - /srv/ctfd/CTFd/.data/redis:/data
     networks:
       internal:
     deploy:
@@ -101,14 +100,21 @@ services:
 
   chall-manager:
     image: ctferio/chall-manager:v0.5.3
+    networks:
+      internal:
+      traefik-public:
     volumes:
-      - /opt/ctfd/chall-manager/id_ed25519:/root/.ssh/id_ed25519
-      - /opt/ctfd/chall-manager/id_ed25519.pub:/root/.ssh/id_ed25519.pub
+      - /srv/ctfd/chall-manager/id_ed25519:/root/.ssh/id_ed25519
+      - /srv/ctfd/chall-manager/id_ed25519.pub:/root/.ssh/id_ed25519.pub
+      - /srv/ctfd/chall-manager/config.json:/root/.docker/config.json:ro
     deploy:
       <<: *deployment
 
   chall-manager-janitor:
     image: ctferio/chall-manager-janitor:v0.5.3
+    networks:
+      internal:
+      traefik-public:
     environment:
       URL: chall-manager:8080
       TICKER: 1m
@@ -122,9 +128,9 @@ services:
       FILE: /opt/ctfd-setup/.ctfd.yaml
       DIRECTORY: /opt/ctfd-setup
     env_file:
-      - /opt/ctfd/ctfd-setup/.env
+      - /srv/ctfd/ctfd-setup/.env
     volumes:
-      - /opt/ctfd/ctfd-setup:/opt/ctfd-setup
+      - /srv/ctfd/ctfd-setup:/opt/ctfd-setup
     networks:
       internal:
     depends_on:
@@ -133,6 +139,11 @@ services:
       <<: *deployment
       restart_policy:
         condition: on-failure
+
+  registry:
+    image: registry:3
+    networks:
+      internal:
 
 networks:
   traefik-public:

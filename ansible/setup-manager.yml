@@ -6,11 +6,11 @@
     - .env.yml
   tags:
     - setup
-
   vars:
+    # installed by geerlingguy.pip
     pip_install_packages:
       - name: docker
-
+      - name: jsondiff
   environment:
     NEEDRESTART_MODE: automatically
 
@@ -27,31 +27,6 @@
     - geerlingguy.pip
     - geerlingguy.docker
     - geerlingguy.git
-
-- name: Manager - Setup Docker daemon for metrics
-  hosts: all
-  remote_user: root
-  become: true
-  tags:
-    - setup
-  tasks:
-    - name: Copy over daemon.json to enable Docker metrics
-      ansible.builtin.copy:
-        src: "./monitoring/daemon.json"
-        dest: "/etc/docker/daemon.json"
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Restart Docker to apply daemon changes
-      ansible.builtin.service:
-        name: docker
-        state: restarted
-
-    - name: Install jsondiff for docker_stack module
-      ansible.builtin.pip:
-        name: jsondiff
-        executable: pip3
 
 # SETUP SWARM
 - name: Setup Swarm - swarm manager initialization
@@ -80,7 +55,7 @@
       community.docker.docker_node:
         hostname: "{{ ansible_hostname }}"
         labels:
-          type: manager
+          manager: "true"
 
     - name: Create net swarm network
       community.docker.docker_network:

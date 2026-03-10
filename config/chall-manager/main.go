@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ctfer-io/chall-manager/sdk"
 	"github.com/pulumi/pulumi-docker/sdk/v4/go/docker"
@@ -15,12 +16,12 @@ func main() {
 		// Image configuration
 		image, ok := req.Config.Additional["image"]
 		if !ok {
-			image = "pandatix/license-lvl1:latest"
+			return fmt.Errorf("image not specified in config")
 		}
 
 		portStr, ok := req.Config.Additional["port"]
 		if !ok {
-			portStr = "8080"
+			return fmt.Errorf("port not specified in config")
 		}
 
 		port, err := strconv.Atoi(portStr)
@@ -30,31 +31,47 @@ func main() {
 
 		hostname, ok := req.Config.Additional["hostname"]
 		if !ok {
-			hostname = "localhost"
+			return fmt.Errorf("hostname not specified in config")
 		}
 
 		protocol_port, ok := req.Config.Additional["protocol_port"]
 		if !ok {
-			protocol_port = "tcp"
+			return fmt.Errorf("protocol_port not specified in config")
 		}
 
 		protocol_url, ok := req.Config.Additional["protocol_url"]
 		if !ok {
-			protocol_url = "http"
+			return fmt.Errorf("protocol_url not specified in config")
 		}
 
 		// Docker configuration
 		docker_host, ok := req.Config.Additional["docker_host"]
 		if !ok {
-			docker_host = "unix:///var/run/docker.sock"
+			return fmt.Errorf("docker_host not specified in config")
 		}
-		prov, err := docker.NewProvider(req.Ctx, "provider", &docker.ProviderArgs{
+
+		var provArgs docker.ProviderArgs
+		provArgs = docker.ProviderArgs{
 			Host: pulumi.String(docker_host),
-			SshOpts: pulumi.StringArray{
+		}
+
+		if strings.HasPrefix(docker_host, "ssh") {
+			provArgs.SshOpts = pulumi.StringArray{
 				pulumi.String("-o"), pulumi.String("StrictHostKeyChecking=no"),
 				pulumi.String("-o"), pulumi.String("UserKnownHostsFile=/dev/null"),
-			},
-		})
+			}
+		}
+
+		registry, ok := req.Config.Additional["registry"]
+		if ok {
+			provArgs.RegistryAuth = docker.ProviderRegistryAuthArray{
+				&docker.ProviderRegistryAuthArgs{
+					Address:    pulumi.String(registry),
+					ConfigFile: pulumi.String("/root/.docker/config.json"),
+				},
+			}
+		}
+		prov, err := docker.NewProvider(req.Ctx, "provider", &provArgs)
 		opts = append(opts, pulumi.Provider(prov))
 
 		// pull image
@@ -68,32 +85,50 @@ func main() {
 			return err
 		}
 
-		// create a container
-		container, err := docker.NewContainer(req.Ctx, "challenge-container", &docker.ContainerArgs{
-			Image: img.ImageId,
-			Name:  pulumi.Sprintf("challenge-%s", req.Config.Identity),
-			Ports: docker.ContainerPortArray{
-				docker.ContainerPortArgs{
-					Protocol: pulumi.String(protocol_port),
-					Internal: pulumi.Int(port),
-					// do not configure External, docker will computed an available port >= 32768
-					// do not configure Ip, default to 0.0.0.0
+		// create a swarm service constrained to nodes tagged for challenges
+		service, err := docker.NewService(req.Ctx, "challenge-service", &docker.ServiceArgs{
+			Name: pulumi.StringPtr(fmt.Sprintf("challenge-%s", req.Config.Identity)),
+			Mode: docker.ServiceModePtr(&docker.ServiceModeArgs{
+				Replicated: docker.ServiceModeReplicatedPtr(&docker.ServiceModeReplicatedArgs{
+					Replicas: pulumi.IntPtr(1),
+				}),
+			}),
+			TaskSpec: docker.ServiceTaskSpecArgs{
+				ContainerSpec: docker.ServiceTaskSpecContainerSpecArgs{
+					Image: img.Name,
 				},
+				Placement: docker.ServiceTaskSpecPlacementPtr(&docker.ServiceTaskSpecPlacementArgs{
+					Constraints: pulumi.StringArray{
+						pulumi.String("node.labels.type==challs"),
+					},
+				}),
 			},
-			Rm: pulumi.Bool(true),
+			EndpointSpec: docker.ServiceEndpointSpecPtr(&docker.ServiceEndpointSpecArgs{
+				Ports: docker.ServiceEndpointSpecPortArray{
+					docker.ServiceEndpointSpecPortArgs{
+						Protocol:   pulumi.StringPtr(protocol_port),
+						TargetPort: pulumi.Int(port),
+						// PublishedPort intentionally omitted to let Swarm allocate an available port.
+					},
+				},
+			}),
 		}, opts...)
 		if err != nil {
 			return err
 		}
 
-		resp.ConnectionInfo = container.Ports.ApplyT(func(ports []docker.ContainerPort) string {
-			port := ports[0].External
+		resp.ConnectionInfo = service.EndpointSpec.Ports().ApplyT(func(ports []docker.ServiceEndpointSpecPort) string {
+			external := port
+			if len(ports) > 0 && ports[0].PublishedPort != nil {
+				external = *ports[0].PublishedPort
+			}
+
 			url := fmt.Sprintf("%s%s%s:%d", protocol_url, func() string {
-				if protocol_url == "http" {
+				if strings.HasPrefix(protocol_url, "http") {
 					return "://"
 				}
-				return ""
-			}(), hostname, *port)
+				return " "
+			}(), hostname, external)
 			return url
 		}).(pulumi.StringOutput)
 

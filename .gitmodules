@@ -1,3 +1,3 @@
 [submodule "config/ctfd/plugins/ctfd-chall-manager"]
-	path = config/ctfd/plugins/ctfd-chall-manager
+	path = config/ctfd/plugins/ctfd_chall_manager
 	url = https://github.com/ctfer-io/ctfd-chall-manager.git
