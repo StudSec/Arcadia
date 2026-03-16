@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -12,54 +9,6 @@ import (
 	"github.com/pulumi/pulumi-docker/sdk/v4/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
-
-type dockerConfigFile struct {
-	Auths map[string]dockerConfigAuth `json:"auths"`
-}
-
-type dockerConfigAuth struct {
-	Auth string `json:"auth"`
-}
-
-func loadRegistryCredentials(configPath string, registry string) (string, string, error) {
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		return "", "", err
-	}
-
-	var config dockerConfigFile
-	if err := json.Unmarshal(content, &config); err != nil {
-		return "", "", err
-	}
-
-	registryKeys := []string{
-		registry,
-		strings.TrimSuffix(registry, "/"),
-		"https://" + strings.TrimSuffix(registry, "/"),
-		"http://" + strings.TrimSuffix(registry, "/"),
-	}
-
-	for _, key := range registryKeys {
-		authEntry, ok := config.Auths[key]
-		if !ok || authEntry.Auth == "" {
-			continue
-		}
-
-		decoded, err := base64.StdEncoding.DecodeString(authEntry.Auth)
-		if err != nil {
-			return "", "", err
-		}
-
-		credentials := strings.SplitN(string(decoded), ":", 2)
-		if len(credentials) != 2 {
-			return "", "", fmt.Errorf("invalid auth entry for registry %s", registry)
-		}
-
-		return credentials[0], credentials[1], nil
-	}
-
-	return "", "", fmt.Errorf("registry credentials not found for %s", registry)
-}
 
 func main() {
 	sdk.Run(func(req *sdk.Request, resp *sdk.Response, opts ...pulumi.ResourceOption) error {
@@ -69,6 +18,9 @@ func main() {
 		if !ok {
 			return fmt.Errorf("image not specified in config")
 		}
+
+		image_split := strings.Split(strings.Split(image, ":")[0], "/")
+		chall_name := image_split[len(image_split)-1]
 
 		portStr, ok := req.Config.Additional["port"]
 		if !ok {
@@ -101,6 +53,7 @@ func main() {
 			return fmt.Errorf("docker_host not specified in config")
 		}
 
+		// create the docker provider
 		var provArgs docker.ProviderArgs
 		provArgs = docker.ProviderArgs{
 			Host: pulumi.String(docker_host),
@@ -122,70 +75,43 @@ func main() {
 				},
 			}
 		}
+
 		prov, err := docker.NewProvider(req.Ctx, "provider", &provArgs)
 		if err != nil {
 			return err
 		}
 		opts = append(opts, pulumi.Provider(prov))
 
-		// pull image
-		img, err := docker.NewRemoteImage(req.Ctx, "challenge-image", &docker.RemoteImageArgs{
-			Name:        pulumi.String(image),
-			Platform:    pulumi.String("linux/amd64"),
-			KeepLocally: pulumi.Bool(true), // do not remove image (same image for several instances)
-
-		}, opts...)
-		if err != nil {
-			return err
-		}
-
 		// create a swarm service constrained to nodes tagged for challenges
 		serviceArgs := &docker.ServiceArgs{
 			Name: pulumi.StringPtr(fmt.Sprintf("challenge-%s", req.Config.Identity)),
-			Mode: docker.ServiceModeArgs{
-				Replicated: docker.ServiceModeReplicatedArgs{
-					Replicas: pulumi.IntPtr(1),
+			Mode: &docker.ServiceModeArgs{
+				Replicated: &docker.ServiceModeReplicatedArgs{
+					Replicas: pulumi.Int(1),
 				},
 			},
-			TaskSpec: docker.ServiceTaskSpecArgs{
-				ContainerSpec: docker.ServiceTaskSpecContainerSpecArgs{
-					Image: img.Name,
+			TaskSpec: &docker.ServiceTaskSpecArgs{
+				ContainerSpec: &docker.ServiceTaskSpecContainerSpecArgs{
+					Image: pulumi.String(image),
 				},
-				Placement: docker.ServiceTaskSpecPlacementArgs{
+				Placement: &docker.ServiceTaskSpecPlacementArgs{
 					Constraints: pulumi.StringArray{
 						pulumi.String("node.labels.type==challs"),
 					},
 				},
 			},
-			EndpointSpec: docker.ServiceEndpointSpecArgs{
+			EndpointSpec: &docker.ServiceEndpointSpecArgs{
 				Ports: docker.ServiceEndpointSpecPortArray{
-					docker.ServiceEndpointSpecPortArgs{
+					&docker.ServiceEndpointSpecPortArgs{
 						Protocol:   pulumi.StringPtr(protocol_port),
 						TargetPort: pulumi.Int(port),
-						// PublishedPort intentionally omitted to let Swarm allocate an available port.
+						// publishedPort intentionally omitted to let Swarm allocate an available port
 					},
 				},
 			},
-			ConvergeConfig: docker.ServiceConvergeConfigArgs{
-				Delay:   pulumi.StringPtr("1s"),
-				Timeout: pulumi.StringPtr("15s"),
-			},
 		}
 
-		if registry != "" {
-			username, password, err := loadRegistryCredentials("/root/.docker/config.json", registry)
-			if err != nil {
-				return err
-			}
-
-			serviceArgs.Auth = docker.ServiceAuthArgs{
-				ServerAddress: pulumi.String(registry),
-				Username:      pulumi.StringPtr(username),
-				Password:      pulumi.StringPtr(password),
-			}
-		}
-
-		service, err := docker.NewService(req.Ctx, "challenge-service", serviceArgs, opts...)
+		service, err := docker.NewService(req.Ctx, fmt.Sprintf("%s-service", chall_name), serviceArgs, opts...)
 		if err != nil {
 			return err
 		}
