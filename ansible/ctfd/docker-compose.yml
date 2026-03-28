@@ -109,6 +109,7 @@ services:
       - /srv/ctfd/chall-manager/id_ed25519:/root/.ssh/id_ed25519
       - /srv/ctfd/chall-manager/id_ed25519.pub:/root/.ssh/id_ed25519.pub
       - /root/.docker/config.json:/root/.docker/config.json:ro
+      - /root/.ssh/config:/root/.ssh/config:ro
     deploy:
       <<: *deployment
 

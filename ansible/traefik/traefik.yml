@@ -3,7 +3,7 @@
 # dashboard: true
 #  debug: true
 log:
-  level: ERROR
+  level: DEBUG
 accessLog: {}
 
 entryPoints:
@@ -50,3 +50,6 @@ providers:
   file:
     filename: /etc/traefik/services.yml
     watch: true
+  swarm:
+    exposedByDefault: false
+    endpoint: "unix:///var/run/docker.sock"

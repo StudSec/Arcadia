@@ -24,9 +24,9 @@
       # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
       ansible.builtin.apt:
         update_cache: true
-    - name: Install rsync
+    - name: Install rsync, python3-pip and dnsutils
       ansible.builtin.apt:
-        name: rsync
+        name: [rsync, python3-pip, dnsutils]
         state: present
   roles:
     - geerlingguy.pip
@@ -41,6 +41,23 @@
         labels:
           ctf: "true"
       delegate_to: "{{ groups['manager'][0] }}"
+
+    - name: Get true registry IP
+      ansible.builtin.command: "getent ahostsv4 registry.{{ CTF_DOMAIN }}"
+      register: registry_getent
+      changed_when: false
+
+    - name: Set first resolved registry IP
+      ansible.builtin.set_fact:
+        registry_manager_ip: "{{ registry_getent.stdout_lines[0].split()[0] }}"
+      when: registry_getent.stdout_lines | length > 0
+
+    - name: Set registry IP in /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^.*\sregistry\.{{ CTF_DOMAIN | regex_escape() }}$'
+        line: "{{ registry_manager_ip }} registry.{{ CTF_DOMAIN }}"
+        state: present
 
     - name: Login to remote Docker registry
       community.docker.docker_login:
@@ -81,24 +98,6 @@
         recursive: true
       become: false
       loop: "{{ ctfd_sync_paths }}"
-
-    - name: Create keys for chall-manager
-      community.crypto.openssh_keypair:
-        path: "/srv/ctfd/chall-manager/id_ed25519"
-        type: ed25519
-
-    - name: Read public key for chall-manager
-      ansible.builtin.slurp:
-        src: "/srv/ctfd/chall-manager/id_ed25519.pub"
-      register: chall_manager_pubkey
-
-    - name: Add public key to authorized_keys for all chall nodes
-      ansible.posix.authorized_key:
-        key: "{{ chall_manager_pubkey.content | b64decode }}"
-        user: user
-        state: present
-      delegate_to: "{{ item }}"
-      loop: "{{ groups['challs'] }}"
 
     - name: Substitute environment variables in docker-compose.yml
       ansible.builtin.shell: |

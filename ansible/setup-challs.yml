@@ -22,9 +22,9 @@
       # https://github.com/geerlingguy/ansible-role-pip/issues/49#issuecomment-1824708282
       ansible.builtin.apt:
         update_cache: true
-    - name: Install rsync
+    - name: Install rsync and python3-pip
       ansible.builtin.apt:
-        name: rsync
+        name: [rsync, python3-pip]
         state: present
   roles:
     - geerlingguy.git
