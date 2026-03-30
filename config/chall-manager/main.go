@@ -122,12 +122,17 @@ func main() {
 				external = *ports[0].PublishedPort
 			}
 
-			url := fmt.Sprintf("%s%s%s:%d", protocol_url, func() string {
+			url := fmt.Sprintf("%s%s%s%s%d", protocol_url, func() string {
 				if strings.HasPrefix(protocol_url, "http") {
 					return "://"
 				}
 				return " "
-			}(), hostname, external)
+			}(), hostname, func() string {
+				if strings.HasPrefix(protocol_url, "http") {
+					return ":"
+				}
+				return " "
+			}(), external)
 			return url
 		}).(pulumi.StringOutput)
 

@@ -42,23 +42,6 @@
           ctf: "true"
       delegate_to: "{{ groups['manager'][0] }}"
 
-    - name: Get true registry IP
-      ansible.builtin.command: "getent ahostsv4 registry.{{ CTF_DOMAIN }}"
-      register: registry_getent
-      changed_when: false
-
-    - name: Set first resolved registry IP
-      ansible.builtin.set_fact:
-        registry_manager_ip: "{{ registry_getent.stdout_lines[0].split()[0] }}"
-      when: registry_getent.stdout_lines | length > 0
-
-    - name: Set registry IP in /etc/hosts
-      ansible.builtin.lineinfile:
-        path: /etc/hosts
-        regexp: '^.*\sregistry\.{{ CTF_DOMAIN | regex_escape() }}$'
-        line: "{{ registry_manager_ip }} registry.{{ CTF_DOMAIN }}"
-        state: present
-
     - name: Login to remote Docker registry
       community.docker.docker_login:
         registry_url: "registry.{{ CTF_DOMAIN }}"

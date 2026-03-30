@@ -57,13 +57,13 @@
         repo: "{{ CHALL_REPO }}"
         dest: /srv/challs
 
-    - name: Install Python dependencies for deploy.py
+    - name: Install Ployer
       ansible.builtin.pip:
-        requirements: /srv/challs/requirements.txt
-        executable: pip3
-        extra_args: --break-system-packages
+        name: ployer
+        state: present
 
     - name: Deploy challenges with checker.py
       ansible.builtin.command: >
-        python3 /srv/challs/checker.py --run --host {{ CHALLS_DOMAIN }} --CTFd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
+        ployer --run --runner swarm --host {{ CHALLS_DOMAIN }} --type static \
+          --ctfd "https://{{ CTF_DOMAIN }} {{ ADMIN_TOKEN }}" --registry registry.{{ CTF_DOMAIN }}
       changed_when: true
