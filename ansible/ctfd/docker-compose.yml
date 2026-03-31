@@ -26,7 +26,7 @@ services:
       - ERROR_LOG=-
       - REVERSE_PROXY=true
       - PRESET_ADMIN_USER=admin
-      - PRESET_ADMIN_EMAIL=changeme@example.com
+      - PRESET_ADMIN_EMAIL=noreply@studsec.nl
       - PRESET_ADMIN_PASSWORD=$ADMIN_PASS
       - PRESET_ADMIN_TOKEN=$ADMIN_TOKEN
       - PLUGIN_SETTINGS_CM_API_URL=http://chall-manager:8080
