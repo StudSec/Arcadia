@@ -99,6 +99,12 @@ func main() {
 						pulumi.String("node.labels.type==challs"),
 					},
 				},
+				Resources: &docker.ServiceTaskSpecResourcesArgs{
+					Limits: &docker.ServiceTaskSpecResourcesLimitsArgs{
+						MemoryBytes: pulumi.Int(256 * 1024 * 1024), // 256MB
+						NanoCpus:    pulumi.Int(500000000),         // 0.5 CPU
+					},
+				},
 			},
 			EndpointSpec: &docker.ServiceEndpointSpecArgs{
 				Ports: docker.ServiceEndpointSpecPortArray{
